@@ -47,6 +47,10 @@ void ticker_task(u32_t arg, void* arg_p) {
   }
 }
 
+static void io_cb(u8_t io, void *arg, u16_t available) {
+  print("rx cb on io %i, bytes available %i\n", io, available);
+}
+
 int main(void) {
 
   PROC_init();
@@ -67,6 +71,10 @@ int main(void) {
   IO_define(0, io_usb, 0);
   IO_define(1, io_uart, 0);
   IO_define(2, io_uart, 1);
+
+  IO_set_callback(0, io_cb, 10);
+  IO_set_callback(1, io_cb, 20);
+  IO_set_callback(2, io_cb, 30);
 
   print("\n\n\nHardware initialization done\n");
 
@@ -100,10 +108,12 @@ int main(void) {
   task *ticker = TASK_create(ticker_task, TASK_STATIC);
   TASK_start_timer(ticker, &ticker_timer, 0, 0, 0, 1000, "ticker");
 
+  SYS_dbg_mask_disable(D_I2C);
+
   while (1) {
     while (TASK_tick());
     //TASK_wait(); // why the hell wont this work??
-    //__WFI();
+    __WFI();
   }
 }
 
