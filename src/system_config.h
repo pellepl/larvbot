@@ -42,7 +42,11 @@
 #define IOWIFI            1 // uart2
 #define IODBG             2 // uart4
 
-#define CONFIG_IO_MAX     (CONFIG_UART_CNT + CONFIG_USB_VCD)
+#ifdef CONFIG_USB_VCD
+#define CONFIG_IO_MAX     (CONFIG_UART_CNT + 1)
+#else
+#define CONFIG_IO_MAX     (CONFIG_UART_CNT)
+#endif
 
 /*********************************************/
 /***** Hardware build time configuration *****/

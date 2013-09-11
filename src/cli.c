@@ -63,7 +63,7 @@ static cmd c_tbl[] = {
     },
     {.name = "trace",     .fn = (func)f_trace,
         .help = "Dumps system trace stdout\n"\
-        "Dumps system trace in chronological orderto stdout\n"
+        "Dumps system trace in chronological order to stdout\n"
     },
     {.name = "help",     .fn = (func)f_help,
         .help = "Prints help\n"\
