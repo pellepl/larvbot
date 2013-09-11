@@ -95,6 +95,7 @@ CFILES 		+= processor.c
 CFILES 		+= stm32f4xx_it.c
 CFILES		+= gpio_stm32f4.c
 CFILES		+= timer.c
+CFILES		+= cli.c
 
 # stm32 lib files
 SPATH 		+= ${stmcmsisdir}/Source/Templates/gcc_ride7
@@ -207,7 +208,7 @@ $(DEPFILES) : ${builddir}/%.d:%.c
 		sed 's,\($*\)\.o[ :]*, ${builddir}/\1.o $@ : ,g' < $@.$$$$ > $@; \
 		${RM} $@.$$$$
 
-all: info mkdirs $(BINARY)
+all: info mkdirs ${hfile} $(BINARY)
 
 info:
 	@echo "* Building to ${builddir}"
@@ -241,7 +242,7 @@ install: $(BINARY)
 debug: $(BINARY)
 	@${GDB} ${builddir}/${BINARY}.elf -x debug.gdb
 
-config-header:
+${hfile}: config.mk
 	@echo "* Generating config header ${hfile}.."
 	@echo "// Auto generated file, do not tamper" > ${hfile}
 	@echo "#ifdef INCLUDE_CONFIG_HEADER" >> ${hfile}
