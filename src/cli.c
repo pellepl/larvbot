@@ -36,6 +36,9 @@ static void *_args[16];
 
 
 static int f_spam(int io, char *s, int delta, int times);
+static int f_assert(void);
+static int f_dump(void);
+static int f_trace(void);
 static int f_help(char *s);
 
 
@@ -49,6 +52,18 @@ static cmd c_tbl[] = {
         .help = "Spams an io port with text\n"\
         "spam <io> <text> <delta_ms> <times>\n"
         "Spams port <io> with <text> every <delta_ms> millisecond, <times> times\n"
+    },
+    {.name = "assert",     .fn = (func)f_assert,
+        .help = "Asserts the system\n"\
+        "Asserts the system and stops everything\n"
+    },
+    {.name = "dump",     .fn = (func)f_dump,
+        .help = "Dumps system state to stdout\n"\
+        "Dumps state of system components to stdout\n"
+    },
+    {.name = "trace",     .fn = (func)f_trace,
+        .help = "Dumps system trace stdout\n"\
+        "Dumps system trace in chronological orderto stdout\n"
     },
     {.name = "help",     .fn = (func)f_help,
         .help = "Prints help\n"\
@@ -78,6 +93,28 @@ static int f_spam(int io, char *s, int delta, int times) {
     SYS_hardsleep_ms(delta);
   }
 
+  return 0;
+}
+
+static int f_assert(void) {
+  ASSERT(FALSE);
+  return 0;
+}
+
+static int f_dump(void) {
+#ifdef CONFIG_TASK_QUEUE
+  TASK_dump(IOSTD);
+  print("\n");
+#endif
+  return 0;
+}
+
+static int f_trace(void) {
+#ifdef DBG_TRACE_MON
+  SYS_dump_trace(IOSTD);
+#else
+  print("Trace disabled, DBG_TRACE_MON not defined\n");
+#endif
   return 0;
 }
 

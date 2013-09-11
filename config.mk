@@ -17,6 +17,7 @@ CONFIG_UART = 1
 CONFIG_I2C = 1
 CONFIG_I2C_DEVICE = 1
 CONFIG_LSM303 = 1
+CONFIG_WIFI232 = 1
 CONFIG_OS = 0
 
 include ../generic/system/include.mk

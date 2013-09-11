@@ -21,7 +21,7 @@ typedef enum {
   PORTH,
   PORTI,
   _IO_PORTS
-} io_port;
+} gpio_port;
 
 typedef enum {
   PIN0 = 0,
@@ -42,7 +42,7 @@ typedef enum {
   PIN15,
   PIN16,
   _IO_PINS
-} io_pin;
+} gpio_pin;
 
 
 typedef enum {
@@ -64,14 +64,14 @@ typedef enum {
   AF15,
   AF16,
   _AFS
-} io_af;
+} gpio_af;
 
 
 typedef enum {
-  IO_2MHZ = 0,
-  IO_25MHZ,
-  IO_50MHZ,
-  IO_100MHZ,
+  CLK_2MHZ = 0,
+  CLK_25MHZ,
+  CLK_50MHZ,
+  CLK_100MHZ,
   _IO_SPEEDS
 } io_speed;
 
@@ -82,27 +82,27 @@ typedef enum {
   AF,
   ANALOG,
   _IO_MODES
-} io_mode;
+} gpio_mode;
 
 
 typedef enum {
   PUSHPULL = 0,
   OPENDRAIN,
   _IO_OUTTYPES
-} io_outtype;
+} gpio_outtype;
 
 typedef enum {
   NOPULL= 0,
   PULLUP,
   PULLDOWN,
   _IO_PULLS
-} io_pull;
+} gpio_pull;
 
-void io_init(void);
-void io_config(io_port port, io_pin pin, io_speed speed, io_mode mode, io_af af, io_outtype outtype, io_pull pull);
-void io_config_out(io_port port, io_pin pin, io_speed speed, io_outtype outtype, io_pull pull);
-void io_config_in(io_port port, io_pin pin, io_speed speed);
-void io_config_analog(io_port port, io_pin pin);
-void io_release(io_port port, io_pin pin);
+void gpio_init(void);
+void gpio_config(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mode, gpio_af af, gpio_outtype outtype, gpio_pull pull);
+void gpio_config_out(gpio_port port, gpio_pin pin, io_speed speed, gpio_outtype outtype, gpio_pull pull);
+void gpio_config_in(gpio_port port, gpio_pin pin, io_speed speed);
+void gpio_config_analog(gpio_port port, gpio_pin pin);
+void gpio_release(gpio_port port, gpio_pin pin);
 
 #endif /* GPIO_H_ */

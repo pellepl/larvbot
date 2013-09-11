@@ -115,7 +115,7 @@ const GPIOPuPd_TypeDef io_pulls[] = {
 
 static u32_t enabled_pins[_IO_PORTS];
 
-static void io_enable_pin(io_port port, io_pin pin) {
+static void io_enable_pin(gpio_port port, gpio_pin pin) {
   if (enabled_pins[port] == 0) {
     // first pin enabled on port, start port clock
     RCC_AHB1PeriphClockCmd(io_rcc[port], ENABLE);
@@ -123,7 +123,7 @@ static void io_enable_pin(io_port port, io_pin pin) {
   enabled_pins[port] |= (1<<pin);
 }
 
-static void io_disable_pin(io_port port, io_pin pin) {
+static void io_disable_pin(gpio_port port, gpio_pin pin) {
   enabled_pins[port] &= ~(1<<pin);
   if (enabled_pins[port] == 0) {
     // all pins disabled on port, stop port clock
@@ -131,7 +131,7 @@ static void io_disable_pin(io_port port, io_pin pin) {
   }
 }
 
-static void io_setup(io_port port, io_pin pin, io_speed speed, io_mode mode, io_af af, io_outtype outtype, io_pull pull) {
+static void io_setup(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mode, gpio_af af, gpio_outtype outtype, gpio_pull pull) {
   GPIO_InitTypeDef hw;
   if (mode == AF) {
     GPIO_PinAFConfig((GPIO_TypeDef *)io_ports[port], io_pinsources[pin], io_afs[af]);
@@ -144,26 +144,26 @@ static void io_setup(io_port port, io_pin pin, io_speed speed, io_mode mode, io_
   GPIO_Init((GPIO_TypeDef *)io_ports[port], &hw);
 }
 
-void io_config(io_port port, io_pin pin, io_speed speed, io_mode mode, io_af af, io_outtype outtype, io_pull pull) {
+void gpio_config(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mode, gpio_af af, gpio_outtype outtype, gpio_pull pull) {
   io_enable_pin(port, pin);
   io_setup(port, pin, speed, mode, af, outtype, pull);
 }
-void io_config_out(io_port port, io_pin pin, io_speed speed, io_outtype outtype, io_pull pull) {
+void gpio_config_out(gpio_port port, gpio_pin pin, io_speed speed, gpio_outtype outtype, gpio_pull pull) {
   io_enable_pin(port, pin);
   io_setup(port, pin, speed, OUT, AF0, outtype, pull);
 }
-void io_config_in(io_port port, io_pin pin, io_speed speed) {
+void gpio_config_in(gpio_port port, gpio_pin pin, io_speed speed) {
   io_enable_pin(port, pin);
   io_setup(port, pin, speed, IN, AF0, PUSHPULL, NOPULL);
 }
-void io_config_analog(io_port port, io_pin pin) {
+void gpio_config_analog(gpio_port port, gpio_pin pin) {
   io_enable_pin(port, pin);
-  io_setup(port, pin, IO_100MHZ, IN, AF0, PUSHPULL, NOPULL);
+  io_setup(port, pin, CLK_100MHZ, IN, AF0, PUSHPULL, NOPULL);
 }
-void io_release(io_port port, io_pin pin) {
+void gpio_release(gpio_port port, gpio_pin pin) {
   io_disable_pin(port, pin);
 }
-void io_init(void) {
+void gpio_init(void) {
   memset(enabled_pins, 0, sizeof(enabled_pins));
 }
 

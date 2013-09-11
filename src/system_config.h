@@ -13,6 +13,14 @@
 #include "stm32f4xx.h"
 #include "core_cm4.h"
 
+// damn that blasted eclipse indexer!
+// from FunctionalState typedef enum in stm32f4xx.h
+#define DISABLE (0)
+#define ENABLE  (!DISABLE)
+// from FlagStatus, ITStatus typedef enum in stm32f4xx.h
+#define RESET   (0)
+#define SET     (!RESET)
+
 #include "types.h"
 
 #define APP_NAME "mubot"
@@ -200,8 +208,8 @@
 //#define DBG_OFF
 
 // enable or disable tracing
-//#define DBG_TRACE_MON
-//#define TRACE_SIZE            (512)
+#define DBG_TRACE_MON
+#define TRACE_SIZE            (512)
 
 // enable debug monitor for os
 #define OS_DBG_MON            1
