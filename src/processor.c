@@ -204,30 +204,12 @@ static void usb_config(void) {
 
 static void uart_config(void) {
 #ifdef CONFIG_UART
-  USART_InitTypeDef USART_InitStructure;
 #ifdef CONFIG_UART2
   // AF7 = GPIO_AF_USART2
   // tx
   gpio_config(PORTA, PIN2, CLK_50MHZ, AF, AF7, PUSHPULL, NOPULL);
   // rx
   gpio_config(PORTA, PIN3, CLK_50MHZ, AF, AF7, PUSHPULL, NOPULL);
-
-  // USART configuration
-  USART_InitStructure.USART_BaudRate = 115200;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-  USART_Init(USART2, &USART_InitStructure);
-
-  // Enable USART interrupt
-  USART_ITConfig(USART2, USART_IT_TC, DISABLE);
-  USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
-  USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
-
-  // Enable USART
-  USART_Cmd(USART2, ENABLE);
 #endif
 #ifdef CONFIG_UART4
   // AF8 = GPIO_AF_UART4
@@ -235,23 +217,6 @@ static void uart_config(void) {
   gpio_config(PORTA, PIN0, CLK_50MHZ, AF, AF8, PUSHPULL, NOPULL);
   // rx
   gpio_config(PORTA, PIN1, CLK_50MHZ, AF, AF8, PUSHPULL, NOPULL);
-
-  // USART configuration
-  USART_InitStructure.USART_BaudRate = 115200;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-  USART_Init(UART4, &USART_InitStructure);
-
-  // Enable USART interrupt
-  USART_ITConfig(UART4, USART_IT_TC, DISABLE);
-  USART_ITConfig(UART4, USART_IT_TXE, DISABLE);
-  USART_ITConfig(UART4, USART_IT_RXNE, ENABLE);
-
-  // Enable USART
-  USART_Cmd(UART4, ENABLE);
 #endif
 #endif
 }

@@ -190,7 +190,11 @@
 
 #define WIFIIN      0
 #define WIFIOUT     0
-#define UART1_SPEED WIFI_UART_BAUD
+
+#define UART1_SPEED 115200
+#define UART2_SPEED WIFI_UART_BAUD
+#define UART3_SPEED 115200
+#define UART4_SPEED 115200
 
 /** OS **/
 
@@ -210,6 +214,8 @@
 
 // disable all debug output
 //#define DBG_OFF
+
+#define CONFIG_DEFAULT_DEBUG_MASK     (0)
 
 // enable or disable tracing
 #define DBG_TRACE_MON
