@@ -65,13 +65,15 @@ int main(void) {
 
   print("Subsystem initialization done\n");
 
-    UART_assure_tx(_UART(0), TRUE);
+  UART_assure_tx(_UART(0), TRUE);
   UART_set_callback(_UART(0), 0, 0);
 
   task *ticker = TASK_create(ticker_task, TASK_STATIC);
   TASK_start_timer(ticker, &ticker_timer, 0, 0, 0, 1000, "ticker");
 
   SYS_dbg_mask_disable(D_I2C);
+
+  IO_assure_tx(IOSTD, TRUE);
 
   while (1) {
     while (TASK_tick());
