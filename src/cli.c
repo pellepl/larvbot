@@ -10,6 +10,8 @@
 #include "io.h"
 #include "taskq.h"
 #include "miniutils.h"
+#include "i2c_driver.h"
+#include "lsm303_driver.h"
 
 #define CLI_PROMPT "> "
 #define IS_STRING(s) ((u8_t*)(s) >= (u8_t*)cli_pars_buf && (u8_t*)(s) < (u8_t*)cli_pars_buf + sizeof(cli_pars_buf))
@@ -35,10 +37,19 @@ static void *_args[16];
 // --------------------------------------------
 
 
+#ifdef CONFIG_I2C
+static int f_i2c_scan(int speed);
+#ifdef CONFIG_LSM303
+static int f_lsm_open(void);
+static int f_lsm_read(int);
+#endif
+#endif
+
 static int f_spam(int io, char *s, int delta, int times);
 static int f_assert(void);
 static int f_dump(void);
 static int f_trace(void);
+static int f_reset(void);
 static int f_help(char *s);
 
 
@@ -48,6 +59,21 @@ static int f_help(char *s);
 
 
 static cmd c_tbl[] = {
+#ifdef CONFIG_I2C
+    {.name = "i2c_scan",     .fn = (func)f_i2c_scan,
+        .help = "Scans i2c bus for acknowledged addresses\n"\
+        "i2c_scan <speed>\n"
+        "ex. i2c_scan 400000\n"
+    },
+#ifdef CONFIG_LSM303
+    {.name = "lsm_open",     .fn = (func)f_lsm_open,
+        .help = "Opens LSM303 device\n"
+    },
+    {.name = "lsm_read",     .fn = (func)f_lsm_read,
+        .help = "Reads LSM303 device\n"
+    },
+#endif
+#endif
     {.name = "spam",     .fn = (func)f_spam,
         .help = "Spams an io port with text\n"\
         "spam <io> <text> <delta_ms> <times>\n"
@@ -64,6 +90,9 @@ static cmd c_tbl[] = {
     {.name = "trace",     .fn = (func)f_trace,
         .help = "Dumps system trace stdout\n"\
         "Dumps system trace in chronological order to stdout\n"
+    },
+    {.name = "reset",     .fn = (func)f_reset,
+        .help = "Resets system\n"
     },
     {.name = "help",     .fn = (func)f_help,
         .help = "Prints help\n"\
@@ -82,6 +111,107 @@ static cmd c_tbl[] = {
 // ------------------------------------------------
 // COMMAND LINE INTERFACE FUNCTIONS IMPLEMENTATIONS
 // ------------------------------------------------
+
+#ifdef CONFIG_I2C
+static int cli_i2c_scan_addr;
+static void i2c_scan_report_task(u32_t ures, void *vbus) {
+  i2c_bus *bus = (i2c_bus *)vbus;
+  s32_t res = (s32_t)ures;
+  if (cli_i2c_scan_addr < 0xff) {
+    if (cli_i2c_scan_addr == 0) {
+      print("     0 2 4 6 8 a c e\n"
+            "    ----------------");
+    }
+    if ((cli_i2c_scan_addr & 0x0f) == 0) {
+      print("\n %1x | ", (cli_i2c_scan_addr>>4));
+    }
+    switch(res) {
+    case I2C_OK:
+      print("A "); break;
+    case I2C_ERR_BUS_BUSY:
+      print("_ "); break;
+    case I2C_ERR_PHY:
+      if (I2C_phy_err(bus) & (1<<I2C_ERR_PHY_ACK_FAIL)) {
+        print(". ");
+      } else {
+        print("X ");
+      }
+        break;
+    case I2C_ERR_UNKNOWN_STATE:
+      print("? "); break;
+    default:
+      print("NA"); break;
+    }
+    cli_i2c_scan_addr += 2;
+    I2C_query(bus, cli_i2c_scan_addr);
+  } else {
+    print("\n   END\n");
+    I2C_close(bus);
+  }
+}
+
+static void cli_i2c_scan_cb(i2c_bus *bus, int res) {
+  task *report_scan_task = TASK_create(i2c_scan_report_task, 0);
+  TASK_run(report_scan_task, res, bus);
+}
+
+static int f_i2c_scan(int speed) {
+  if (_argc != 1) return -1;
+  print("scanning i2c bus at %i Hz\n", speed);
+  s32_t res = I2C_config(_I2C_BUS(0), speed);
+  if (res < 0) {
+    print("error:%i\n", res);
+    return 0;
+  }
+  res = I2C_set_callback(_I2C_BUS(0), cli_i2c_scan_cb);
+  if (res < 0) {
+    print("error:%i\n", res);
+    return 0;
+  }
+  cli_i2c_scan_addr = 0;
+  I2C_query(_I2C_BUS(0), cli_i2c_scan_addr);
+  return 1;
+}
+
+#ifdef CONFIG_LSM303
+static lsm303_dev lsm_dev;
+static int lsm_state = 0;
+static void cli_lsm_cb(lsm303_dev *dev, int res) {
+  print("lsm_res: %i\n", res);
+  if (lsm_state == 0) {
+    print("lsm configured\n");
+  } else if (lsm_state == 1) {
+    s16_t *acc = lsm_get_acc_reading(&lsm_dev);
+    s16_t *mag = lsm_get_mag_reading(&lsm_dev);
+    print("acc:%04x %04x %04x   mag:%04x %04x %04x\n", acc[0], acc[1], acc[2], mag[0], mag[1], mag[2]);
+    print("heading:%04x / %i\n", lsm_get_heading(&lsm_dev), (lsm_get_heading(&lsm_dev)*360)>>16);
+  }
+}
+
+static int f_lsm_open(void) {
+  lsm_state = 0;
+  lsm_open(&lsm_dev, _I2C_BUS(0), FALSE, cli_lsm_cb);
+  lsm_config_default(&lsm_dev);
+  return 0;
+}
+
+static int f_lsm_read(int count) {
+  if (_argc == 0) {
+    count = 0;
+  }
+  do {
+    lsm_state = 1;
+    lsm_read_both(&lsm_dev);
+    if (count > 0) {
+      SYS_hardsleep_ms(100);
+    }
+  } while (count--);
+  return 0;
+}
+#endif // CONFIG_LSM303
+
+
+#endif // CONFIG_I2C
 
 static int f_spam(int io, char *s, int delta, int times) {
   if (_argc < 4 || _argc > 4 || !IS_STRING(s)) {
@@ -115,6 +245,11 @@ static int f_trace(void) {
 #else
   print("Trace disabled, DBG_TRACE_MON not defined\n");
 #endif
+  return 0;
+}
+
+static int f_reset(void) {
+  arch_reset();
   return 0;
 }
 
@@ -199,19 +334,22 @@ static void cli_task_f(u32_t rlen, void *buf_p) {
   }
 
   // execute command
+  bool prompt = TRUE;
   if (fn) {
     _argc--;
     //DBG(D_CLI, D_DEBUG, "CONS calling [%p] with %i args\n", fn, _argc);
     int res = (int)_variadic_call(fn, _argc, _args);
     if (res == -1) {
       print("%s", c_tbl[ix].help);
-    } else {
+    } else if (res == 0) {
       print("OK\n");
+    } else {
+      prompt = FALSE;
     }
   } else {
     print("unknown command - try help\n");
   }
-  print(CLI_PROMPT);
+  if (prompt) print(CLI_PROMPT);
 
 
 }

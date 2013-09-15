@@ -69,7 +69,7 @@ int main(void) {
   UART_set_callback(_UART(0), 0, 0);
 
   task *ticker = TASK_create(ticker_task, TASK_STATIC);
-  TASK_start_timer(ticker, &ticker_timer, 0, 0, 0, 1000, "ticker");
+  TASK_start_timer(ticker, &ticker_timer, 0, 0, 0, 10000, "ticker");
 
   SYS_dbg_mask_disable(D_I2C);
 

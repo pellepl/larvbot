@@ -127,42 +127,56 @@ void UsageFault_Handler(void) {
 }
 
 void SVC_Handler(void) {
+  TRACE_IRQ_ENTER(SVCall_IRQn);
+  TRACE_IRQ_EXIT(SVCall_IRQn);
 }
 
 void DebugMon_Handler(void) {
 }
 
 void PendSV_Handler(void) {
+  TRACE_IRQ_ENTER(PendSV_IRQn);
+  TRACE_IRQ_EXIT(PendSV_IRQn);
 }
 
 void SysTick_Handler(void) {
+  TRACE_IRQ_ENTER(SysTick_IRQn);
+  TRACE_IRQ_EXIT(SysTick_IRQn);
 }
 
 void TIM2_IRQHandler(void) {
-  //TRACE_IRQ_ENTER(5);
+  //TRACE_IRQ_ENTER(TIM2_IRQn);
   TIMER_irq();
-  //TRACE_IRQ_EXIT(5);
+  //TRACE_IRQ_EXIT(TIM2_IRQn);
 }
 
 #ifdef CONFIG_UART2
 void USART2_IRQHandler(void) {
+  TRACE_IRQ_ENTER(USART2_IRQn);
   UART_irq(_UART(0));
+  TRACE_IRQ_EXIT(USART2_IRQn);
 }
 #endif
 #ifdef CONFIG_UART4
 void UART4_IRQHandler(void) {
+  TRACE_IRQ_ENTER(UART4_IRQn);
   UART_irq(_UART(1));
+  TRACE_IRQ_EXIT(UART4_IRQn);
 }
 #endif
 
 #ifdef CONFIG_I2C
 void I2C1_ER_IRQHandler(void)
 {
+  TRACE_IRQ_ENTER(I2C1_ER_IRQn);
   I2C_IRQ_err(&__i2c_bus_vec[0]);
+  TRACE_IRQ_EXIT(I2C1_ER_IRQn);
 }
 
 void I2C1_EV_IRQHandler(void)
 {
+  TRACE_IRQ_ENTER(I2C1_EV_IRQn);
   I2C_IRQ_ev(&__i2c_bus_vec[0]);
+  TRACE_IRQ_EXIT(I2C1_EV_IRQn);
 }
 #endif

@@ -265,4 +265,6 @@ void PROC_init() {
   uart_config();
   i2c_config();
   tim_config();
+
+  gpio_config(PORTF, PIN6, CLK_50MHZ, OUT, AF0, PUSHPULL, NOPULL);
 }
