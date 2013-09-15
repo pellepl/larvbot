@@ -40,7 +40,6 @@ typedef enum {
   PIN13,
   PIN14,
   PIN15,
-  PIN16,
   _IO_PINS
 } gpio_pin;
 
@@ -62,7 +61,6 @@ typedef enum {
   AF13,
   AF14,
   AF15,
-  AF16,
   _AFS
 } gpio_af;
 
@@ -98,11 +96,29 @@ typedef enum {
   _IO_PULLS
 } gpio_pull;
 
+typedef enum {
+  FLANK_UP = 0,
+  FLANK_DOWN,
+  FLANK_BOTH,
+  _IO_FLANKS
+} gpio_flank;
+
+typedef void (*gpio_interrupt_fn)(gpio_pin pin);
+
 void gpio_init(void);
+
 void gpio_config(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mode, gpio_af af, gpio_outtype outtype, gpio_pull pull);
 void gpio_config_out(gpio_port port, gpio_pin pin, io_speed speed, gpio_outtype outtype, gpio_pull pull);
 void gpio_config_in(gpio_port port, gpio_pin pin, io_speed speed);
 void gpio_config_analog(gpio_port port, gpio_pin pin);
-void gpio_release(gpio_port port, gpio_pin pin);
+void gpio_config_release(gpio_port port, gpio_pin pin);
+
+void gpio_enable(gpio_port port, gpio_pin pin);
+void gpio_disable(gpio_port port, gpio_pin pin);
+void gpio_set(gpio_port port, gpio_pin enable_pin, gpio_pin disable_pin);
+u32_t gpio_get(gpio_port port, gpio_pin pin);
+
+s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank);
+void gpio_disable_interrupt(gpio_port port, gpio_pin pin);
 
 #endif /* GPIO_H_ */

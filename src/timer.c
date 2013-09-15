@@ -8,16 +8,16 @@
 #include "timer.h"
 #include "system.h"
 #include "miniutils.h"
-
+#include "gpio.h"
 static u32_t q;
 void TIMER_irq() {
   if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
     TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
     q++;
     if ((q & 0xffff) < 0x1ff) {
-      GPIO_set(GPIOF, GPIO_Pin_6, 0);
+      gpio_enable(PORTF, PIN6);
     } else {
-      GPIO_set(GPIOF, 0, GPIO_Pin_6);
+      gpio_disable(PORTF, PIN6);
     }
     bool ms_update = SYS_timer();
     if (ms_update) {

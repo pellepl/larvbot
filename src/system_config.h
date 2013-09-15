@@ -23,7 +23,7 @@
 
 #include "types.h"
 
-#define APP_NAME "mubot"
+#define APP_NAME "larvbot"
 
 
 /****************************************/
@@ -185,7 +185,6 @@
 // system tick frequency
 #define SYS_TIMER_TICK_FREQ   1000
 
-
 /** UART **/
 
 #define WIFIIN      0
@@ -219,19 +218,19 @@
 
 // enable or disable tracing
 #define DBG_TRACE_MON
-#define TRACE_SIZE            (512)
+#define TRACE_SIZE                    (512)
 
 // enable debug monitor for os
-#define OS_DBG_MON            1
+#define OS_DBG_MON                    1
 
 // enable stack boundary checks
-#define OS_STACK_CHECK        1
+#define OS_STACK_CHECK                1
 
 // enable stack usage checks
-#define OS_STACK_USAGE_CHECK  1
+#define OS_STACK_USAGE_CHECK          1
 
 // enable os scheduler validity
-#define OS_RUNTIME_VALIDITY_CHECK  0
+#define OS_RUNTIME_VALIDITY_CHECK     0
 
 
 #endif /* SYSTEM_CONFIG_H_ */

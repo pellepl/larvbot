@@ -7,7 +7,7 @@
 
 #include "gpio.h"
 
-const GPIO_TypeDef *io_ports[] = {
+GPIO_TypeDef *const io_ports[] = {
     GPIOA,
     GPIOB,
     GPIOC,
@@ -19,7 +19,7 @@ const GPIO_TypeDef *io_ports[] = {
     GPIOI
 };
 
-const u32_t io_rcc[] = {
+u32_t const io_rcc[] = {
     RCC_AHB1Periph_GPIOA,
     RCC_AHB1Periph_GPIOB,
     RCC_AHB1Periph_GPIOC,
@@ -31,7 +31,7 @@ const u32_t io_rcc[] = {
     RCC_AHB1Periph_GPIOI
 };
 
-const u8_t io_pinsources[] = {
+u8_t const io_pinsources[] = {
     GPIO_PinSource0,
     GPIO_PinSource1,
     GPIO_PinSource2,
@@ -50,7 +50,7 @@ const u8_t io_pinsources[] = {
     GPIO_PinSource15,
 };
 
-const u16_t io_pins[] = {
+u16_t const io_pins[] = {
     GPIO_Pin_0,
     GPIO_Pin_1,
     GPIO_Pin_2,
@@ -69,7 +69,7 @@ const u16_t io_pins[] = {
     GPIO_Pin_15,
 };
 
-const u8_t io_afs[] = {
+u8_t const io_afs[] = {
     0,
     1,
     2,
@@ -88,44 +88,103 @@ const u8_t io_afs[] = {
     15,
 };
 
-const GPIOSpeed_TypeDef io_speeds[] = {
+GPIOSpeed_TypeDef const io_speeds[] = {
     GPIO_Speed_2MHz,
     GPIO_Speed_25MHz,
     GPIO_Speed_50MHz,
     GPIO_Speed_100MHz
 };
 
-const GPIOMode_TypeDef io_modes[] = {
+GPIOMode_TypeDef const io_modes[] = {
     GPIO_Mode_IN,
     GPIO_Mode_OUT,
     GPIO_Mode_AF,
     GPIO_Mode_AN,
 };
 
-const GPIOOType_TypeDef io_outtypes[] = {
+GPIOOType_TypeDef const io_outtypes[] = {
     GPIO_OType_PP,
     GPIO_OType_OD,
 };
 
-const GPIOPuPd_TypeDef io_pulls[] = {
+GPIOPuPd_TypeDef const io_pulls[] = {
     GPIO_PuPd_NOPULL,
     GPIO_PuPd_UP,
     GPIO_PuPd_DOWN
 };
 
-static u32_t enabled_pins[_IO_PORTS];
+EXTITrigger_TypeDef const io_flanks[] = {
+    EXTI_Trigger_Rising,
+    EXTI_Trigger_Falling,
+    EXTI_Trigger_Rising_Falling
+};
+
+u8_t const io_exti_portsources[] = {
+    EXTI_PortSourceGPIOA,
+    EXTI_PortSourceGPIOB,
+    EXTI_PortSourceGPIOC,
+    EXTI_PortSourceGPIOD,
+    EXTI_PortSourceGPIOE,
+    EXTI_PortSourceGPIOF,
+    EXTI_PortSourceGPIOG,
+    EXTI_PortSourceGPIOH,
+    EXTI_PortSourceGPIOI,
+};
+
+u8_t const io_exti_pinsources[] = {
+    EXTI_PinSource0,
+    EXTI_PinSource1,
+    EXTI_PinSource2,
+    EXTI_PinSource3,
+    EXTI_PinSource4,
+    EXTI_PinSource5,
+    EXTI_PinSource6,
+    EXTI_PinSource7,
+    EXTI_PinSource8,
+    EXTI_PinSource9,
+    EXTI_PinSource10,
+    EXTI_PinSource11,
+    EXTI_PinSource12,
+    EXTI_PinSource13,
+    EXTI_PinSource14,
+    EXTI_PinSource15,
+};
+
+u32_t const io_exti_lines[] = {
+    EXTI_Line0,
+    EXTI_Line1,
+    EXTI_Line2,
+    EXTI_Line3,
+    EXTI_Line4,
+    EXTI_Line5,
+    EXTI_Line6,
+    EXTI_Line7,
+    EXTI_Line8,
+    EXTI_Line9,
+    EXTI_Line11,
+    EXTI_Line11,
+    EXTI_Line12,
+    EXTI_Line13,
+    EXTI_Line14,
+    EXTI_Line15,
+};
+
+static struct {
+  u32_t enabled_pins[_IO_PORTS];
+  gpio_interrupt_fn ifns[_IO_PINS];
+} _gpio;
 
 static void io_enable_pin(gpio_port port, gpio_pin pin) {
-  if (enabled_pins[port] == 0) {
+  if (_gpio.enabled_pins[port] == 0) {
     // first pin enabled on port, start port clock
     RCC_AHB1PeriphClockCmd(io_rcc[port], ENABLE);
   }
-  enabled_pins[port] |= (1<<pin);
+  _gpio.enabled_pins[port] |= (1<<pin);
 }
 
 static void io_disable_pin(gpio_port port, gpio_pin pin) {
-  enabled_pins[port] &= ~(1<<pin);
-  if (enabled_pins[port] == 0) {
+  _gpio.enabled_pins[port] &= ~(1<<pin);
+  if (_gpio.enabled_pins[port] == 0) {
     // all pins disabled on port, stop port clock
     RCC_AHB1PeriphClockCmd(io_rcc[port], DISABLE);
   }
@@ -160,11 +219,105 @@ void gpio_config_analog(gpio_port port, gpio_pin pin) {
   io_enable_pin(port, pin);
   io_setup(port, pin, CLK_100MHZ, IN, AF0, PUSHPULL, NOPULL);
 }
-void gpio_release(gpio_port port, gpio_pin pin) {
+void gpio_config_release(gpio_port port, gpio_pin pin) {
   io_disable_pin(port, pin);
 }
-void gpio_init(void) {
-  memset(enabled_pins, 0, sizeof(enabled_pins));
+void gpio_enable(gpio_port port, gpio_pin pin) {
+  GPIO_enable(io_ports[port], io_pins[pin]);
+}
+void gpio_disable(gpio_port port, gpio_pin pin) {
+  GPIO_disable(io_ports[port], io_pins[pin]);
+}
+void gpio_set(gpio_port port, gpio_pin enable_pin, gpio_pin disable_pin) {
+  GPIO_set(io_ports[port], io_pins[enable_pin], io_pins[disable_pin]);
+}
+u32_t gpio_get(gpio_port port, gpio_pin pin) {
+  return GPIO_read(io_ports[port], io_pins[pin]);
+}
+s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank) {
+  if (_gpio.ifns[pin]) {
+    // already busy
+    return -1;
+  }
+  _gpio.ifns[pin] = fn;
+
+  EXTI_InitTypeDef EXTI_InitStructure;
+
+  SYSCFG_EXTILineConfig(io_exti_portsources[port], io_exti_pinsources[pin]);
+
+  EXTI_InitStructure.EXTI_Line = io_exti_lines[pin];
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = io_flanks[flank];
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+  return 0;
+}
+void gpio_disable_interrupt(gpio_port port, gpio_pin pin) {
+  _gpio.ifns[pin] = NULL;
+  EXTI_InitTypeDef EXTI_InitStructure;
+
+  SYSCFG_EXTILineConfig(io_exti_portsources[port], io_exti_pinsources[pin]);
+
+  EXTI_InitStructure.EXTI_Line = io_exti_lines[pin];
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+  EXTI_InitStructure.EXTI_LineCmd = DISABLE;
+  EXTI_Init(&EXTI_InitStructure);
 }
 
+void gpio_init(void) {
+  memset(&_gpio, 0, sizeof(_gpio));
+}
 
+static void _gpio_check_exti(u32_t line, gpio_pin pin) {
+  if(EXTI_GetITStatus(line) != RESET) {
+    EXTI_ClearITPendingBit(line);
+    if (_gpio.ifns[pin]) _gpio.ifns[pin](pin);
+  }
+}
+
+void EXTI0_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI0_IRQn);
+  _gpio_check_exti(EXTI_Line0, PIN0);
+  TRACE_IRQ_EXIT(EXTI0_IRQn);
+}
+void EXTI1_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI1_IRQn);
+  _gpio_check_exti(EXTI_Line1, PIN1);
+  TRACE_IRQ_EXIT(EXTI1_IRQn);
+}
+void EXTI2_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI2_IRQn);
+  _gpio_check_exti(EXTI_Line2, PIN2);
+  TRACE_IRQ_EXIT(EXTI2_IRQn);
+}
+void EXTI3_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI3_IRQn);
+  _gpio_check_exti(EXTI_Line3, PIN3);
+  TRACE_IRQ_EXIT(EXTI3_IRQn);
+}
+void EXTI4_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI4_IRQn);
+  _gpio_check_exti(EXTI_Line4, PIN4);
+  TRACE_IRQ_EXIT(EXTI4_IRQn);
+}
+void EXTI9_5_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI9_5_IRQn);
+  _gpio_check_exti(EXTI_Line5, PIN5);
+  _gpio_check_exti(EXTI_Line6, PIN6);
+  _gpio_check_exti(EXTI_Line7, PIN7);
+  _gpio_check_exti(EXTI_Line8, PIN8);
+  _gpio_check_exti(EXTI_Line9, PIN9);
+  TRACE_IRQ_EXIT(EXTI9_5_IRQn);
+}
+void EXTI15_10_IRQHandler(void) {
+  TRACE_IRQ_ENTER(EXTI15_10_IRQn);
+  _gpio_check_exti(EXTI_Line10, PIN10);
+  _gpio_check_exti(EXTI_Line11, PIN11);
+  _gpio_check_exti(EXTI_Line12, PIN12);
+  _gpio_check_exti(EXTI_Line13, PIN13);
+  _gpio_check_exti(EXTI_Line14, PIN14);
+  _gpio_check_exti(EXTI_Line15, PIN15);
+  TRACE_IRQ_EXIT(EXTI15_10_IRQn);
+}
