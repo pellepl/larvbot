@@ -12,6 +12,9 @@
 #include "miniutils.h"
 #include "i2c_driver.h"
 #include "lsm303_driver.h"
+#ifdef CONFIG_BOOTLOADER
+#include "bl_exec.h"
+#endif
 
 #define CLI_PROMPT "> "
 #define IS_STRING(s) ((u8_t*)(s) >= (u8_t*)cli_pars_buf && (u8_t*)(s) < (u8_t*)cli_pars_buf + sizeof(cli_pars_buf))
@@ -50,6 +53,10 @@ static int f_assert(void);
 static int f_dump(void);
 static int f_trace(void);
 static int f_reset(void);
+#ifdef CONFIG_BOOTLOADER
+static int f_reset_boot();
+static int f_reset_fw_upgrade();
+#endif
 static int f_help(char *s);
 
 
@@ -94,6 +101,14 @@ static cmd c_tbl[] = {
     {.name = "reset",     .fn = (func)f_reset,
         .help = "Resets system\n"
     },
+#ifdef CONFIG_BOOTLOADER
+    {.name = "reset_boot",  .fn = (func)f_reset_boot,
+        .help = "Resets system into bootloader\n"
+    },
+    {.name = "reset_fwupgrade",  .fn = (func)f_reset_fw_upgrade,
+        .help = "Resets system into bootloader for upgrade\n"
+    },
+#endif // CONFIG_BOOTLOADER
     {.name = "help",     .fn = (func)f_help,
         .help = "Prints help\n"\
         "help or help <command>\n"
@@ -247,6 +262,19 @@ static int f_trace(void) {
 #endif
   return 0;
 }
+
+#ifdef CONFIG_BOOTLOADER
+static int f_reset_boot() {
+  SYS_reboot(REBOOT_EXEC_BOOTLOADER);
+  return 0;
+}
+
+static int f_reset_fw_upgrade() {
+  bootloader_update_fw();
+  SYS_reboot(REBOOT_EXEC_BOOTLOADER);
+  return 0;
+}
+#endif
 
 static int f_reset(void) {
   arch_reset();

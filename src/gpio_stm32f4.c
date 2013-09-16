@@ -169,6 +169,25 @@ u32_t const io_exti_lines[] = {
     EXTI_Line15,
 };
 
+IRQn_Type const io_ext_irq[] = {
+    EXTI0_IRQn,
+    EXTI1_IRQn,
+    EXTI2_IRQn,
+    EXTI3_IRQn,
+    EXTI4_IRQn,
+    EXTI9_5_IRQn,
+    EXTI9_5_IRQn,
+    EXTI9_5_IRQn,
+    EXTI9_5_IRQn,
+    EXTI9_5_IRQn,
+    EXTI15_10_IRQn,
+    EXTI15_10_IRQn,
+    EXTI15_10_IRQn,
+    EXTI15_10_IRQn,
+    EXTI15_10_IRQn,
+    EXTI15_10_IRQn,
+};
+
 static struct {
   u32_t enabled_pins[_IO_PORTS];
   gpio_interrupt_fn ifns[_IO_PINS];
@@ -235,13 +254,14 @@ u32_t gpio_get(gpio_port port, gpio_pin pin) {
   return GPIO_read(io_ports[port], io_pins[pin]);
 }
 s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank) {
+  EXTI_InitTypeDef EXTI_InitStructure;
+
   if (_gpio.ifns[pin]) {
     // already busy
     return -1;
   }
   _gpio.ifns[pin] = fn;
 
-  EXTI_InitTypeDef EXTI_InitStructure;
 
   SYSCFG_EXTILineConfig(io_exti_portsources[port], io_exti_pinsources[pin]);
 
@@ -251,13 +271,15 @@ s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, 
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
 
+  NVIC_EnableIRQ(io_ext_irq[pin]);
+
   return 0;
 }
 void gpio_disable_interrupt(gpio_port port, gpio_pin pin) {
-  _gpio.ifns[pin] = NULL;
   EXTI_InitTypeDef EXTI_InitStructure;
+  _gpio.ifns[pin] = NULL;
 
-  SYSCFG_EXTILineConfig(io_exti_portsources[port], io_exti_pinsources[pin]);
+  NVIC_DisableIRQ(io_ext_irq[pin]);
 
   EXTI_InitStructure.EXTI_Line = io_exti_lines[pin];
   EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;

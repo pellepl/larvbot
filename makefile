@@ -66,7 +66,7 @@ RM = rm -f
 ###############
 
 INCLUDE_DIRECTIVES = 
-COMPILEROPTIONS = $(INCLUDE_DIRECTIVES) $(FLAGS) -mcpu=cortex-m3 -mno-thumb-interwork -mthumb -Wall -gdwarf-2
+COMPILEROPTIONS = $(INCLUDE_DIRECTIVES) $(FLAGS) -mcpu=cortex-m4 -mno-thumb-interwork -mthumb -Wall -gdwarf-2
 #-ffunction-sections -fdata-sections
 COMPILEROPTIONS += -O2
 # -nostartfiles -nostdlib 

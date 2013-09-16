@@ -72,6 +72,14 @@ static void nvic_config(void)
   NVIC_SetPriority(I2C1_ER_IRQn, NVIC_EncodePriority(prioGrp, 1, 1));
   NVIC_EnableIRQ(I2C1_ER_IRQn);
 #endif
+
+  NVIC_SetPriority(EXTI0_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+  NVIC_SetPriority(EXTI1_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+  NVIC_SetPriority(EXTI2_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+  NVIC_SetPriority(EXTI3_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+  NVIC_SetPriority(EXTI4_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+  NVIC_SetPriority(EXTI9_5_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+  NVIC_SetPriority(EXTI15_10_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
 }
 
 static void dbgmcu_config(void)
@@ -254,6 +262,25 @@ static void tim_config(void) {
   TIM_Cmd(TIM2, ENABLE);
 }
 
+// bootloader settings
+
+static void SPI_config_bootloader() {
+#ifdef CONFIG_SPI
+  // Abort all DMA transfers
+  /* Disable DMA SPI1 RX channel transfer complete interrupt */
+  DMA_ITConfig(SPI1_MASTER_Rx_DMA_Channel, DMA_IT_TC, DISABLE);
+
+  /* Disable SPI1_MASTER DMA Rx/Tx request */
+  SPI_I2S_DMACmd(SPI1_MASTER, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
+
+  /* Disable DMA SPI2 RX channel transfer complete interrupt */
+  DMA_ITConfig(SPI2_MASTER_Rx_DMA_Channel, DMA_IT_TC, DISABLE);
+
+  /* Disable SPI1_MASTER DMA Rx/Tx request */
+  SPI_I2S_DMACmd(SPI2_MASTER, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
+#endif // CONFIG_SPI
+}
+
 
 void PROC_init() {
   rcc_config();
@@ -268,3 +295,8 @@ void PROC_init() {
 
   gpio_config(PORTF, PIN6, CLK_50MHZ, OUT, AF0, PUSHPULL, NOPULL);
 }
+
+void PROC_periph_init_bootloader() {
+  SPI_config_bootloader();
+}
+

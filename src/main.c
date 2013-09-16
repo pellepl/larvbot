@@ -55,10 +55,10 @@ int main(void) {
   SHMEM_set_reboot_reason(REBOOT_UNKONWN);
   print("Reboot reason: %i\n", rr);
   if (rr == REBOOT_EXEC_BOOTLOADER) {
-//    print("Peripheral init for bootloader\n");
-//    PROC_periph_init_bootloader();
-//    print("Bootloader execute\n");
-//    bootloader_execute();
+    print("Peripheral init for bootloader\n");
+    PROC_periph_init_bootloader();
+    print("Bootloader execute\n");
+    bootloader_execute();
   }
 
   print("Stack 0x%08x -- 0x%08x: %iK\n", STACK_START, STACK_END, (STACK_END - STACK_START)/1024);
@@ -77,8 +77,7 @@ int main(void) {
 
   while (1) {
     while (TASK_tick());
-    //TASK_wait(); // why the hell wont this work??
-    __WFI();
+    TASK_wait();
   }
 }
 

@@ -64,7 +64,6 @@
 
 
 /** General **/
-#if 0
 // internal flash start address
 #define FLASH_START       FLASH_BASE
 // internal flash page erase size
@@ -72,13 +71,17 @@
 // internal flash protection/unprotection for firmware
 #define FLASH_PROTECT     FLASH_WRProt_AllPages
 // internal flash total size in bytes
-#define FLASH_TOTAL_SIZE  (512*1024) // hd
-#endif
+#define FLASH_TOTAL_SIZE  (1024*1024) // stm32f407zgt
+
 // firmware upgrade placement on spi flash
+// TODO PETER
+#if 0
 #define FIRMWARE_SPIF_ADDRESS_BASE   \
   (FLASH_M25P16_SIZE_TOTAL - \
       ((FLASH_TOTAL_SIZE+sizeof(fw_upgrade_info))/FLASH_M25P16_SIZE_SECTOR_ERASE)*FLASH_M25P16_SIZE_SECTOR_ERASE - \
       FLASH_M25P16_SIZE_SECTOR_ERASE)
+#endif
+#define FIRMWARE_SPIF_ADDRESS_BASE 0
 
 #define FIRMWARE_SPIF_ADDRESS_META (FIRMWARE_SPIF_ADDRESS_BASE)
 #define FIRMWARE_SPIF_ADDRESS_DATA (FIRMWARE_SPIF_ADDRESS_BASE + sizeof(fw_upgrade_info))
@@ -187,8 +190,13 @@
 
 /** UART **/
 
+// usart2
 #define WIFIIN      0
 #define WIFIOUT     0
+
+// uart4
+#define UARTSTDIN   1
+#define UARTSTDOUT  1
 
 #define UART1_SPEED 115200
 #define UART2_SPEED WIFI_UART_BAUD

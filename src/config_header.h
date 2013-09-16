@@ -19,5 +19,6 @@
 #define CONFIG_I2C_DEVICE
 #define CONFIG_LSM303
 #define CONFIG_WIFI232
+#define CONFIG_BOOTLOADER
 #endif
 #endif
