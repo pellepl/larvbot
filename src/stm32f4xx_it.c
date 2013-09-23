@@ -7,6 +7,12 @@
 #ifdef CONFIG_I2C
 #include "i2c_driver.h"
 #endif
+#ifdef CONFIG_OS
+#include "os.h"
+#endif
+#ifdef CONFIG_ADC
+#include "adc_driver.h"
+#endif
 
 // Cortex-M4 exceptions
 // Weak aliases
@@ -106,10 +112,12 @@
 void NMI_Handler(void) {
 }
 
+#if USER_HARDFAULT == 0
 void HardFault_Handler(void) {
   while (1) {
   }
 }
+#endif
 
 void MemManage_Handler(void) {
   while (1) {
@@ -126,21 +134,31 @@ void UsageFault_Handler(void) {
   }
 }
 
-void SVC_Handler(void) {
-  TRACE_IRQ_ENTER(SVCall_IRQn);
-  TRACE_IRQ_EXIT(SVCall_IRQn);
-}
+//void SVC_Handler(void) {
+//  TRACE_IRQ_ENTER(SVCall_IRQn);
+//  TRACE_IRQ_EXIT(SVCall_IRQn);
+//}
 
 void DebugMon_Handler(void) {
 }
 
 void PendSV_Handler(void) {
+#ifdef CONFIG_OS
+  TRACE_IRQ_ENTER(PendSV_IRQn);
+  __os_pendsv();
+  // cannot have trace after pendsv, this will corrupt ctx switcher
+  //TRACE_IRQ_EXIT(PendSV_IRQn);
+#else
   TRACE_IRQ_ENTER(PendSV_IRQn);
   TRACE_IRQ_EXIT(PendSV_IRQn);
+#endif
 }
 
 void SysTick_Handler(void) {
   TRACE_IRQ_ENTER(SysTick_IRQn);
+#ifdef CONFIG_OS
+  __os_systick();
+#endif
   TRACE_IRQ_EXIT(SysTick_IRQn);
 }
 
@@ -180,3 +198,11 @@ void I2C1_EV_IRQHandler(void)
   TRACE_IRQ_EXIT(I2C1_EV_IRQn);
 }
 #endif
+
+void ADC_IRQHandler(void) {
+  TRACE_IRQ_ENTER(ADC_IRQn);
+#ifdef CONFIG_ADC
+  ADC_irq();
+#endif
+  TRACE_IRQ_EXIT(ADC_IRQn);
+}

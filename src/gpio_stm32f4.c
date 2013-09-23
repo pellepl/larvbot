@@ -292,54 +292,54 @@ void gpio_init(void) {
   memset(&_gpio, 0, sizeof(_gpio));
 }
 
-static void _gpio_check_exti(u32_t line, gpio_pin pin) {
-  if(EXTI_GetITStatus(line) != RESET) {
-    EXTI_ClearITPendingBit(line);
+static void _gpio_check_exti(gpio_pin pin) {
+  if(EXTI_GetITStatus(io_exti_lines[pin]) != RESET) {
+    EXTI_ClearITPendingBit(io_exti_lines[pin]);
     if (_gpio.ifns[pin]) _gpio.ifns[pin](pin);
   }
 }
 
 void EXTI0_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI0_IRQn);
-  _gpio_check_exti(EXTI_Line0, PIN0);
+  _gpio_check_exti(PIN0);
   TRACE_IRQ_EXIT(EXTI0_IRQn);
 }
 void EXTI1_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI1_IRQn);
-  _gpio_check_exti(EXTI_Line1, PIN1);
+  _gpio_check_exti(PIN1);
   TRACE_IRQ_EXIT(EXTI1_IRQn);
 }
 void EXTI2_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI2_IRQn);
-  _gpio_check_exti(EXTI_Line2, PIN2);
+  _gpio_check_exti(PIN2);
   TRACE_IRQ_EXIT(EXTI2_IRQn);
 }
 void EXTI3_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI3_IRQn);
-  _gpio_check_exti(EXTI_Line3, PIN3);
+  _gpio_check_exti(PIN3);
   TRACE_IRQ_EXIT(EXTI3_IRQn);
 }
 void EXTI4_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI4_IRQn);
-  _gpio_check_exti(EXTI_Line4, PIN4);
+  _gpio_check_exti(PIN4);
   TRACE_IRQ_EXIT(EXTI4_IRQn);
 }
 void EXTI9_5_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI9_5_IRQn);
-  _gpio_check_exti(EXTI_Line5, PIN5);
-  _gpio_check_exti(EXTI_Line6, PIN6);
-  _gpio_check_exti(EXTI_Line7, PIN7);
-  _gpio_check_exti(EXTI_Line8, PIN8);
-  _gpio_check_exti(EXTI_Line9, PIN9);
+  _gpio_check_exti(PIN5);
+  _gpio_check_exti(PIN6);
+  _gpio_check_exti(PIN7);
+  _gpio_check_exti(PIN8);
+  _gpio_check_exti(PIN9);
   TRACE_IRQ_EXIT(EXTI9_5_IRQn);
 }
 void EXTI15_10_IRQHandler(void) {
   TRACE_IRQ_ENTER(EXTI15_10_IRQn);
-  _gpio_check_exti(EXTI_Line10, PIN10);
-  _gpio_check_exti(EXTI_Line11, PIN11);
-  _gpio_check_exti(EXTI_Line12, PIN12);
-  _gpio_check_exti(EXTI_Line13, PIN13);
-  _gpio_check_exti(EXTI_Line14, PIN14);
-  _gpio_check_exti(EXTI_Line15, PIN15);
+  _gpio_check_exti(PIN10);
+  _gpio_check_exti(PIN11);
+  _gpio_check_exti(PIN12);
+  _gpio_check_exti(PIN13);
+  _gpio_check_exti(PIN14);
+  _gpio_check_exti(PIN15);
   TRACE_IRQ_EXIT(EXTI15_10_IRQn);
 }

@@ -6,6 +6,7 @@
  */
 #include "system.h"
 #include "gpio.h"
+#include "spi_driver.h"
 
 static void rcc_config(void)
 {
@@ -28,6 +29,11 @@ static void rcc_config(void)
 #ifdef CONFIG_I2C
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
 #endif
+
+#ifdef CONFIG_ADC
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
+#endif
 }
 
 static void nvic_config(void)
@@ -37,12 +43,14 @@ static void nvic_config(void)
   uint32_t prioGrp = (8-__NVIC_PRIO_BITS) + (2-1); // priogroup 5 for stm32f4xx
   NVIC_SetPriorityGrouping(prioGrp);
 
-  //NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(prioGrp, 0, 0));
-  //NVIC_EnableIRQ(SysTick_IRQn);
-
   // enable TIM2 interrupt, supahigh
   NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(prioGrp, 0, 0));
   NVIC_EnableIRQ(TIM2_IRQn);
+
+#ifdef CONFIG_OS
+  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(prioGrp, 0, 1));
+  NVIC_SetPriority(PendSV_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
+#endif
 
 #ifdef CONFIG_USB_VCD
   NVIC_SetPriority(OTG_FS_IRQn, NVIC_EncodePriority(prioGrp, 2, 0));
@@ -53,14 +61,7 @@ static void nvic_config(void)
   NVIC_SetPriority(USART2_IRQn, NVIC_EncodePriority(prioGrp, 3, 0));
   NVIC_EnableIRQ(USART2_IRQn);
 #endif
-#endif
-
-#ifdef CONFIG_UART
-#ifdef CONFIG_UART2
-  NVIC_SetPriority(USART2_IRQn, NVIC_EncodePriority(prioGrp, 3, 0));
-  NVIC_EnableIRQ(USART2_IRQn);
-#endif
-#ifdef CONFIG_UART2
+#ifdef CONFIG_UART4
   NVIC_SetPriority(UART4_IRQn, NVIC_EncodePriority(prioGrp, 3, 0));
   NVIC_EnableIRQ(UART4_IRQn);
 #endif
@@ -71,6 +72,11 @@ static void nvic_config(void)
   NVIC_EnableIRQ(I2C1_EV_IRQn);
   NVIC_SetPriority(I2C1_ER_IRQn, NVIC_EncodePriority(prioGrp, 1, 1));
   NVIC_EnableIRQ(I2C1_ER_IRQn);
+#endif
+
+#ifdef CONFIG_ADC
+  NVIC_SetPriority(ADC_IRQn, NVIC_EncodePriority(prioGrp, 1, 0));
+  NVIC_EnableIRQ(ADC_IRQn);
 #endif
 
   NVIC_SetPriority(EXTI0_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
@@ -196,7 +202,7 @@ static void sram_config() {
 
   FSMC_NORSRAMInit(&FSMC_NORSRAMInitStructure);
 
-  /*!< Enable FSMC Bank1_SRAM1 Bank */
+  // Enable FSMC Bank1_SRAM1 Bank
   FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM2, ENABLE);
 }
 
@@ -239,6 +245,19 @@ static void i2c_config(void) {
 #endif
 }
 
+static void wifi_config(void) {
+#ifdef CONFIG_WIFI232
+  // reset - pg11
+  gpio_config(PORTG, PIN11, CLK_2MHZ, OUT, AF0, PUSHPULL, PULLUP);
+  // nlink - pg12
+  gpio_config(PORTG, PIN12, CLK_2MHZ, IN, AF0, OPENDRAIN, NOPULL);
+  // nready - pg13
+  gpio_config(PORTG, PIN13, CLK_2MHZ, IN, AF0, OPENDRAIN, NOPULL);
+  // nreload - pg14
+  gpio_config(PORTG, PIN14, CLK_2MHZ, OUT, AF0, PUSHPULL, PULLUP);
+#endif
+}
+
 static void tim_config(void) {
   TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
@@ -262,22 +281,48 @@ static void tim_config(void) {
   TIM_Cmd(TIM2, ENABLE);
 }
 
+static void adc_config(void) {
+#ifdef CONFIG_ADC
+  ADC_InitTypeDef adc;
+
+  // channel 0 / ADC12_IN6
+  gpio_config(PORTA, PIN6, CLK_50MHZ, ANALOG, AF0, OPENDRAIN, NOPULL);
+  // channel 1 / ADC12_IN7
+  gpio_config(PORTA, PIN7, CLK_50MHZ, ANALOG, AF0, OPENDRAIN, NOPULL);
+  // channel 2 / ADC12_IN8
+  gpio_config(PORTB, PIN0, CLK_50MHZ, ANALOG, AF0, OPENDRAIN, NOPULL);
+
+  adc.ADC_Resolution = ADC_Resolution_12b;
+  adc.ADC_ScanConvMode = ENABLE;
+  adc.ADC_ContinuousConvMode = DISABLE;
+  adc.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+  adc.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
+  adc.ADC_DataAlign = ADC_DataAlign_Right;
+  adc.ADC_NbrOfConversion = 1;
+  ADC_Init(ADC1, &adc);
+  ADC_Init(ADC2, &adc);
+
+  ADC_Cmd(ADC1, ENABLE);
+  ADC_Cmd(ADC2, ENABLE);
+#endif
+}
+
 // bootloader settings
 
 static void SPI_config_bootloader() {
 #ifdef CONFIG_SPI
   // Abort all DMA transfers
   /* Disable DMA SPI1 RX channel transfer complete interrupt */
-  DMA_ITConfig(SPI1_MASTER_Rx_DMA_Channel, DMA_IT_TC, DISABLE);
+  DMA_ITConfig(_SPI_BUS(0)->dma_rx_stream, DMA_IT_TC, DISABLE);
 
   /* Disable SPI1_MASTER DMA Rx/Tx request */
-  SPI_I2S_DMACmd(SPI1_MASTER, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
+  SPI_I2S_DMACmd(_SPI_BUS(0)->hw, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
 
   /* Disable DMA SPI2 RX channel transfer complete interrupt */
-  DMA_ITConfig(SPI2_MASTER_Rx_DMA_Channel, DMA_IT_TC, DISABLE);
+  DMA_ITConfig(_SPI_BUS(1)->dma_rx_stream, DMA_IT_TC, DISABLE);
 
   /* Disable SPI1_MASTER DMA Rx/Tx request */
-  SPI_I2S_DMACmd(SPI2_MASTER, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
+  SPI_I2S_DMACmd(_SPI_BUS(0)->hw, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
 #endif // CONFIG_SPI
 }
 
@@ -292,7 +337,10 @@ void PROC_init() {
   uart_config();
   i2c_config();
   tim_config();
+  wifi_config();
+  adc_config();
 
+  // this would be the led, yes?
   gpio_config(PORTF, PIN6, CLK_50MHZ, OUT, AF0, PUSHPULL, NOPULL);
 }
 

@@ -9,6 +9,10 @@
 #include "system.h"
 #include "miniutils.h"
 #include "gpio.h"
+#ifdef CONFIG_OS
+#include "os.h"
+#endif
+
 static u32_t q;
 void TIMER_irq() {
   if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {

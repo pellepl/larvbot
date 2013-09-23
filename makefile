@@ -90,12 +90,20 @@ include config.mk
 CPATH 		+= ${sourcedir}
 SPATH 		+= ${sourcedir}
 INC			+= -I./${sourcedir}
+SFILES		+= stm32f_hardfault.s
 CFILES 		+= main.c
 CFILES 		+= processor.c
 CFILES 		+= stm32f4xx_it.c
 CFILES		+= gpio_stm32f4.c
 CFILES		+= timer.c
 CFILES		+= cli.c
+CFILES		+= wifi_impl.c
+CFILES		+= adc_driver.c
+
+# tinyheap files
+include ../generic/tinyheap/files.mk
+		
+CFILES		+= heap.c
 
 # stm32 lib files
 SPATH 		+= ${stmcmsisdir}/Source/Templates/gcc_ride7

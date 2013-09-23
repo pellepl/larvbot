@@ -106,11 +106,6 @@
 #define SPI1_MASTER_CLK               RCC_APB2Periph_SPI1
 #define SPI1_MASTER_DMA               DMA1
 #define SPI1_MASTER_DMA_CLK           RCC_AHBPeriph_DMA1
-// according to userguide table 78
-#define SPI1_MASTER_Rx_DMA_Channel    DMA1_Channel2
-#define SPI1_MASTER_Tx_DMA_Channel    DMA1_Channel3
-#define SPI1_MASTER_Rx_IRQ_Channel    DMA1_Channel2_IRQn
-#define SPI1_MASTER_Tx_IRQ_Channel    DMA1_Channel3_IRQn
 
 #define SPI2_MASTER_GPIO              GPIOB
 #define SPI2_MASTER_GPIO_CLK          RCC_APB2Periph_GPIOB
@@ -123,11 +118,6 @@
 #define SPI2_MASTER_CLK               RCC_APB1Periph_SPI2
 #define SPI2_MASTER_DMA               DMA1
 #define SPI2_MASTER_DMA_CLK           RCC_AHBPeriph_DMA1
-// according to userguide table 78
-#define SPI2_MASTER_Rx_DMA_Channel    DMA1_Channel4
-#define SPI2_MASTER_Tx_DMA_Channel    DMA1_Channel5
-#define SPI2_MASTER_Rx_IRQ_Channel    DMA1_Channel4_IRQn
-#define SPI2_MASTER_Tx_IRQ_Channel    DMA1_Channel5_IRQn
 
 /** SPI FLASH **/
 
@@ -146,6 +136,10 @@
 
 #endif
 
+/** ADC **/
+
+#define CONFIG_ADC
+
 /** LED **/
 
 #ifdef CONFIG_LED
@@ -163,12 +157,11 @@
 
 /** USR232 WIFI **/
 
-#define WIFI_GPIO_PORT        GPIOD
-#define WIFI_APBPeriph_GPIO   RCC_APB2Periph_GPIOD
-#define WIFI_GPIO_RESET_PIN   GPIO_Pin_0
-#define WIFI_GPIO_LINK_PIN    GPIO_Pin_1
-#define WIFI_GPIO_READY_PIN   GPIO_Pin_14
-#define WIFI_GPIO_RELOAD_PIN  GPIO_Pin_15
+#define WIFI_GPIO_PORT        GPIOG
+#define WIFI_GPIO_RESET_PIN   GPIO_Pin_11
+#define WIFI_GPIO_LINK_PIN    GPIO_Pin_12
+#define WIFI_GPIO_READY_PIN   GPIO_Pin_13
+#define WIFI_GPIO_RELOAD_PIN  GPIO_Pin_14
 #define WIFI_UART             WIFIIN
 #define WIFI_UART_BAUD        57600
 
@@ -209,6 +202,14 @@
 #define CONFIG_OS_PREEMPT_FREQ  2000
 // if enabled, signalled threads will be executed in next ctx switch
 #define CONFIG_OS_BUMP          1
+
+#define XRAM_BEGIN              ((void*)0x64000000)
+#define XRAM_SIZE               (128*1024)
+#define XRAM_END                ((void*)(XRAM_BEGIN + XRAM_SIZE))
+
+#define OS_DBG_BADR(x) \
+    (((x) < RAM_BEGIN || (x) > RAM_END) && ((x) < XRAM_BEGIN || (x) > XRAM_END))
+
 
 /** WIFI **/
 

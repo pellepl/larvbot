@@ -12,12 +12,18 @@
 #include "miniutils.h"
 #include "i2c_driver.h"
 #include "lsm303_driver.h"
-#ifdef CONFIG_BOOTLOADER
 #include "bl_exec.h"
-#endif
+#include "os.h"
+#include "heap.h"
+#include "wifi_impl.h"
+#include "adc_driver.h"
 
 #define CLI_PROMPT "> "
 #define IS_STRING(s) ((u8_t*)(s) >= (u8_t*)cli_pars_buf && (u8_t*)(s) < (u8_t*)cli_pars_buf + sizeof(cli_pars_buf))
+
+
+#define TEST_THREAD
+
 
 typedef int(*func)(int a, ...);
 
@@ -33,7 +39,14 @@ static u16_t cli_buf_ix = 0;
 static task *cli_task;
 static u32_t _argc;
 static void *_args[16];
+static bool pipe = FALSE;
+static u8_t pipe_io;
+static io_rx_cb pipe_cb_func;
+static void *pipe_cb_arg;
+static u8_t pipe_ends = 0;
 
+
+static void cli_pipe(u8_t io, void *arg, u16_t available);
 
 // --------------------------------------------
 // COMMAND LINE INTERFACE FUNCTIONS DEFINITIONS
@@ -48,7 +61,22 @@ static int f_lsm_read(int);
 #endif
 #endif
 
+#ifdef CONFIG_WIFI232
+static int f_wifi_reset(void);
+static int f_wifi_state(void);
+static int f_wifi_scan(void);
+static int f_wifi_wip(void);
+static int f_wifi_ssid(void);
+static int f_wifi_open(void);
+#endif
+
+#ifdef CONFIG_ADC
+static int f_adc_one(int channel);
+static int f_adc_two(int ch1, int ch2);
+#endif
+
 static int f_spam(int io, char *s, int delta, int times);
+static int f_pipe(int io);
 static int f_assert(void);
 static int f_dump(void);
 static int f_trace(void);
@@ -57,7 +85,13 @@ static int f_reset(void);
 static int f_reset_boot();
 static int f_reset_fw_upgrade();
 #endif
+static int f_memrd(void *addr, u32_t size, u8_t io);
+static int f_dbg(void);
 static int f_help(char *s);
+
+#ifdef TEST_THREAD
+static int f_test_thread(void);
+#endif
 
 
 // ----------------------------
@@ -81,10 +115,48 @@ static cmd c_tbl[] = {
     },
 #endif
 #endif
+
+#ifdef CONFIG_WIFI232
+    {.name = "wifi_reset",     .fn = (func)f_wifi_reset,
+        .help = "Resets wifi block\n"
+    },
+    {.name = "wifi_state",     .fn = (func)f_wifi_state,
+        .help = "Returns state of wifi block\n"
+    },
+    {.name = "wifi_scan",     .fn = (func)f_wifi_scan,
+        .help = "Wifi scan of surrounding APs\n"
+    },
+    {.name = "wifi_wip",     .fn = (func)f_wifi_wip,
+        .help = "Returns wifi ip settings\n"
+    },
+    {.name = "wifi_ssid",     .fn = (func)f_wifi_ssid,
+        .help = "Returns SSID connected to wifi block\n"
+    },
+    {.name = "wifi_open",     .fn = (func)f_wifi_open,
+        .help = "Enter wifi config mode and opens pipe\n"
+    },
+#endif
+
+
+#ifdef CONFIG_ADC
+    {.name = "adc_one",     .fn = (func)f_adc_one,
+        .help = "Samples one channel\n" \
+            "adc_one <channel>\n"
+    },
+    {.name = "adc_two",     .fn = (func)f_adc_two,
+        .help = "Samples two channels simultaneously\n" \
+            "adc_two <channel1> <channel2>\n"
+    },
+#endif
+
     {.name = "spam",     .fn = (func)f_spam,
         .help = "Spams an io port with text\n"\
         "spam <io> <text> <delta_ms> <times>\n"
         "Spams port <io> with <text> every <delta_ms> millisecond, <times> times\n"
+    },
+    {.name = "pipe",     .fn = (func)f_pipe,
+        .help = "Connects CLI to another io\n"\
+        "pipe <io>\n"
     },
     {.name = "assert",     .fn = (func)f_assert,
         .help = "Asserts the system\n"\
@@ -109,6 +181,22 @@ static cmd c_tbl[] = {
         .help = "Resets system into bootloader for upgrade\n"
     },
 #endif // CONFIG_BOOTLOADER
+
+
+    {.name = "memrd",   .fn = (func)f_memrd,
+        .help = "Read out memory\n"\
+        "memrd (addr) (size) (io)\n"\
+        "ex: memrd 0x20000000 16\n"
+    },
+
+    {.name = "dbg",   .fn = (func)f_dbg,
+        .help = "Set debug filter and level\n"\
+        "dbg (level <dbg|info|warn|fatal>) (enable [x]*) (disable [x]*)\n"\
+        "x - <task|heap|comm|cnc|cli|nvs|spi|all>\n"\
+        "ex: dbg level info disable all enable cnc comm\n"
+    },
+
+
     {.name = "help",     .fn = (func)f_help,
         .help = "Prints help\n"\
         "help or help <command>\n"
@@ -117,6 +205,12 @@ static cmd c_tbl[] = {
         .help = "Prints help\n"\
         "help or help <command>\n"
     },
+
+#ifdef TEST_THREAD
+    {.name = "test_thread", .fn = (func)f_test_thread,
+        .help = "Starts a test thread\n"
+    },
+#endif
 
     // menu end marker
     {.name = NULL,    .fn = (func)0,        .help = NULL},
@@ -225,8 +319,101 @@ static int f_lsm_read(int count) {
 }
 #endif // CONFIG_LSM303
 
-
 #endif // CONFIG_I2C
+
+
+#ifdef CONFIG_WIFI232
+static int f_wifi_reset(void) {
+  WIFI_IMPL_reset();
+  return 0;
+}
+static int f_wifi_state(void) {
+  WIFI_IMPL_state();
+  return 0;
+}
+static int f_wifi_scan(void) {
+  int res = WIFI_IMPL_scan();
+  if (res != 0) {
+    print("err: %i\n", res);
+  }
+  return 0;
+}
+static int f_wifi_wip(void) {
+  int res = WIFI_IMPL_get_wan();
+  if (res != 0) {
+    print("err: %i\n", res);
+  }
+  return 0;
+}
+static int f_wifi_ssid(void) {
+  int res = WIFI_IMPL_get_ssid();
+  if (res != 0) {
+    print("err: %i\n", res);
+  }
+  return 0;
+}
+static int f_wifi_open(void) {
+  IO_put_buf(IOWIFI, (u8_t*)"+++", 3);
+  SYS_hardsleep_ms(10);
+  u32_t spoon_guard = 0x100000;
+  while ((UART_rx_available(_UART(WIFI_UART)) == 0) && --spoon_guard);
+  if (spoon_guard == 0) {
+    print("No answer\n");
+    return 0;
+  }
+  UART_get_char(_UART(WIFI_UART));
+  UART_put_char(_UART(WIFI_UART), 'a');
+  UART_tx_flush(_UART(WIFI_UART));
+  _argc = 1;
+  f_pipe(IOWIFI);
+  return 0;
+}
+
+#endif // CONFIG_WIFI232
+
+#ifdef CONFIG_ADC
+static void cli_adc_cb(adc_channel ch1, u32_t val1, adc_channel ch2, u32_t val2) {
+  print("ADC result: ch%i %08x  ch%i %08x\n", ch1, val1, ch2, val2);
+}
+
+static int f_adc_one(int channel) {
+  if (_argc != 1) {
+    return -1;
+  }
+  if (channel + 1 >= _ADC_CHANNELS) {
+    print("bad channel\n");
+    return 0;
+  }
+  ADC_set_callback(cli_adc_cb);
+  int res = ADC_sample_mono_single(channel+1);
+  if (res != ADC_OK) {
+    print("err: %i\n", res);
+  }
+
+  return 0;
+}
+static int f_adc_two(int ch1, int ch2) {
+  if (_argc != 2) {
+    return -1;
+  }
+  if (ch1 + 1 >= _ADC_CHANNELS) {
+    print("bad channel1\n");
+    return 0;
+  }
+  if (ch2 + 1 >= _ADC_CHANNELS) {
+    print("bad channel2\n");
+    return 0;
+  }
+  ADC_set_callback(cli_adc_cb);
+  int res = ADC_sample_stereo_single(ch1+1, ch2+1);
+  if (res != ADC_OK) {
+    print("err: %i\n", res);
+  }
+
+  return 0;
+}
+
+#endif // CONFIG_ADC
 
 static int f_spam(int io, char *s, int delta, int times) {
   if (_argc < 4 || _argc > 4 || !IS_STRING(s)) {
@@ -241,15 +428,41 @@ static int f_spam(int io, char *s, int delta, int times) {
   return 0;
 }
 
+static int f_pipe(int io) {
+  if (_argc != 1) {
+    return -1;
+  }
+  if (io == IOSTD) {
+    print("Cannot pipe STD\n");
+    return 0;
+  }
+
+  print("\nEntering io pipe %i, type *** to exit\n", pipe_io);
+
+  enter_critical();
+  pipe_io = io;
+  IO_get_callback(io, &pipe_cb_func, &pipe_cb_arg);
+  IO_set_callback(io, cli_pipe, NULL);
+  pipe = TRUE;
+  exit_critical();
+
+  return 0;
+}
+
 static int f_assert(void) {
   ASSERT(FALSE);
   return 0;
 }
 
 static int f_dump(void) {
+  HEAP_dump();
+  print("\n");
 #ifdef CONFIG_TASK_QUEUE
   TASK_dump(IOSTD);
   print("\n");
+#endif
+#ifdef CONFIG_OS
+  OS_DBG_dump(IOSTD);
 #endif
   return 0;
 }
@@ -281,6 +494,113 @@ static int f_reset(void) {
   return 0;
 }
 
+static int f_memrd(void *addr, u32_t size, u8_t io) {
+  if (_argc < 3) {
+    io = IOSTD;
+  }
+  if (_argc < 2) {
+    size = 1;
+  }
+  if (_argc == 0) {
+    return -1;
+  }
+  bool old_blocking_tx = IO_assure_tx(io, TRUE);
+  IO_tx_flush(io);
+
+  printbuf(io, (u8_t*)addr, size);
+
+  IO_tx_flush(io);
+  IO_assure_tx(io, old_blocking_tx);
+
+  return 0;
+}
+
+#ifdef DBG_OFF
+static int f_dbg() {
+  print("Debug disabled compile-time\n");
+  return 0;
+}
+#else
+const char* DBG_BIT_NAME[] = _DBG_BIT_NAMES;
+
+static void print_debug_setting() {
+  print("DBG level: %i\n", SYS_dbg_get_level());
+  int d;
+  for (d = 0; d < sizeof(DBG_BIT_NAME)/sizeof(const char*); d++) {
+    print("DBG mask %s: %s\n", DBG_BIT_NAME[d], SYS_dbg_get_mask() & (1<<d) ? "ON":"OFF");
+  }
+}
+
+
+static int f_dbg() {
+  enum state {DNONE, DLEVEL, DENABLE, DDISABLE} st = DNONE;
+  int a;
+  if (_argc == 0) {
+    print_debug_setting();
+    return 0;
+  }
+  for (a = 0; a < _argc; a++) {
+    u32_t f = 0;
+    char *s = (char*)_args[a];
+    if (!IS_STRING(s)) {
+      return -1;
+    }
+    if (strcmp("level", s) == 0 || strcmp("l", s) == 0) {
+      st = DLEVEL;
+    } else if (strcmp("enable", s) == 0 || strcmp("e", s) == 0) {
+      st = DENABLE;
+    } else if (strcmp("disable", s) == 0 || strcmp("d", s) == 0) {
+      st = DDISABLE;
+    } else {
+      switch (st) {
+      case DLEVEL:
+        if (strcmp("dbg", s) == 0) {
+          SYS_dbg_level(D_DEBUG);
+        }
+        else if (strcmp("info", s) == 0) {
+          SYS_dbg_level(D_INFO);
+        }
+        else if (strcmp("warn", s) == 0) {
+          SYS_dbg_level(D_WARN);
+        }
+        else if (strcmp("fatal", s) == 0) {
+          SYS_dbg_level(D_FATAL);
+        } else {
+          return -1;
+        }
+        break;
+      case DENABLE:
+      case DDISABLE: {
+        int d;
+        for (d = 0; f == 0 && d < sizeof(DBG_BIT_NAME)/sizeof(const char*); d++) {
+          if (strcmp(DBG_BIT_NAME[d], s) == 0) {
+            f = (1<<d);
+          }
+        }
+        if (strcmp("all", s) == 0 || strcmp("a", s) == 0) {
+          f = D_ANY;
+        }
+        if (f == 0) {
+          return -1;
+        }
+        if (st == DENABLE) {
+          SYS_dbg_mask_enable(f);
+        } else {
+          SYS_dbg_mask_disable(f);
+        }
+        break;
+      }
+      default:
+        return -1;
+      }
+    }
+  }
+  //CONFIG_store();
+  print_debug_setting();
+  return 0;
+}
+#endif
+
 static int f_help(char *s) {
   if (IS_STRING(s)) {
     int i = 0;
@@ -310,6 +630,32 @@ static int f_help(char *s) {
   }
   return 0;
 }
+
+#ifdef TEST_THREAD
+os_thread t_thread;
+static void *tt_func(void *stack) {
+  int t = 10;
+  while (--t) {
+    print("test thread %i\n", t);
+    OS_thread_sleep(1000);
+  }
+  HEAP_xfree(stack);
+  return NULL;
+}
+static int f_test_thread(void) {
+  void *stack = HEAP_xmalloc(256);
+  OS_thread_create(
+      &t_thread,
+      OS_THREAD_FLAG_PRIVILEGED,
+      tt_func,
+      stack,
+      stack,
+      256,
+      "test_thread");
+  return 0;
+}
+#endif
+
 
 
 // -------------------------------
@@ -382,6 +728,15 @@ static void cli_task_f(u32_t rlen, void *buf_p) {
 
 }
 
+static void cli_pipe_leave(void) {
+  print("\nleaving io pipe %i\n", pipe_io);
+  enter_critical();
+  IO_set_callback(pipe_io, pipe_cb_func, pipe_cb_arg);
+  pipe = FALSE;
+  exit_critical();
+  cli_buf_ix = 0;
+}
+
 static void cli_on_line(u8_t *buf, u16_t len) {
   if (len == 0) return;
   memcpy(cli_pars_buf, cli_buf, len);
@@ -390,16 +745,39 @@ static void cli_on_line(u8_t *buf, u16_t len) {
 
 static void cli_io_cb(u8_t io, void *arg, u16_t len) {
   u16_t i;
+  if (pipe) {
+    IO_get_buf(io, cli_buf, len);
+    for (i = 0; i < len; i++) {
+      ioprint(pipe_io, "%c", cli_buf[i]);
+      if (cli_buf[i] == '*') {
+        pipe_ends++;
+        if (pipe_ends >= 3) {
+          cli_pipe_leave();
+        }
+      } else {
+        pipe_ends = 0;
+      }
+    }
+  } else {
+    IO_get_buf(io, &cli_buf[cli_buf_ix], len);
+    for (i = cli_buf_ix; i < cli_buf_ix + len; i++) {
+      if (cli_buf[i] == '\n') {
+        cli_buf[i] = 0;
+        cli_on_line(&cli_buf[0], i);
+        cli_buf_ix = 0;
+        return;
+      }
+    }
+    cli_buf_ix = i;
+  }
+}
+
+static void cli_pipe(u8_t io, void *arg, u16_t len) {
+  u16_t i;
   IO_get_buf(io, &cli_buf[cli_buf_ix], len);
   for (i = cli_buf_ix; i < cli_buf_ix + len; i++) {
-    if (cli_buf[i] == '\n') {
-      cli_buf[i] = 0;
-      cli_on_line(&cli_buf[0], i);
-      cli_buf_ix = 0;
-      return;
-    }
+    print("%c", cli_buf[i]);
   }
-  cli_buf_ix = i;
 }
 
 void CLI_init(void) {
