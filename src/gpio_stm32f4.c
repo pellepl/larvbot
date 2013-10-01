@@ -161,7 +161,7 @@ u32_t const io_exti_lines[] = {
     EXTI_Line7,
     EXTI_Line8,
     EXTI_Line9,
-    EXTI_Line11,
+    EXTI_Line10,
     EXTI_Line11,
     EXTI_Line12,
     EXTI_Line13,
