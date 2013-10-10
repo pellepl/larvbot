@@ -1,12 +1,12 @@
 /*
- * ws_html.h
+ * ws_http.h
  *
  *  Created on: Oct 10, 2013
  *      Author: petera
  */
 
-#ifndef WS_HTML_H_
-#define WS_HTML_H_
+#ifndef WS_HTTP_H_
+#define WS_HTTP_H_
 
 #include "system.h"
 
@@ -31,8 +31,37 @@ typedef enum {
   // Converts the request connection to a transparent TCP/IP tunnel, usually to facilitate SSL-encrypted communication (HTTPS) through an unencrypted HTTP proxy
   CONNECT,
   // Is used to apply partial modifications to a resource
-  PATCH
+  PATCH,
+  _REQ_METHOD_COUNT
 } ws_req_method;
+
+static const char* const SERVER_REQ_METHODS[] = {
+  "GET",
+  "HEAD",
+  "POST",
+  "PUT",
+  "DELETE",
+  "TRACE",
+  "OPTIONS",
+  "CONNECT",
+  "PATCH",
+};
+
+typedef enum {
+  FCONNECTION = 0,
+  FHOST,
+  FCONTENT_LENGTH,
+  FCONTENT_TYPE,
+  _FIELD_COUNT
+} ws_http_fields;
+
+static const char* const SERVER_FIELDS[] = {
+  "Connection",
+  "Host",
+  "Content-Length",
+  "Content-Type",
+};
+
 
 typedef enum {
   S100_CONTINUE = 100,
@@ -91,4 +120,4 @@ typedef struct {
 } ws_response;
 
 
-#endif /* WS_HTML_H_ */
+#endif /* WS_HTTP_H_ */

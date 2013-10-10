@@ -51,6 +51,7 @@ static void wifi_impl_data_cb(u8_t io, u16_t len) {
       if (handle) {
         _wi.handling_input = TRUE;
         task *t = TASK_create(wifi_impl_task_f, 0);
+        ASSERT(t);
         TASK_run(t, IOWIFI, &_wi.rx_rb);
       }
     }
@@ -120,6 +121,16 @@ void WIFI_IMPL_set_delim(u8_t delim_mask,
   if (delim_mask && WIFI_IMPL_DELIM_LENGTH) {
     _wi.delim_length = delim_len;
     _wi.rec = ringbuf_available(&_wi.rx_rb);
+
+    // got enough data for callback already?
+    if (_wi.rec >= delim_len) {
+      if (!_wi.handling_input) {
+        _wi.handling_input = TRUE;
+        task *t = TASK_create(wifi_impl_task_f, 0);
+        ASSERT(t);
+        TASK_run(t, IOWIFI, &_wi.rx_rb);
+      }
+    }
   }
   // TODO millisecond delimiter
 }

@@ -6,7 +6,7 @@
  */
 
 #include "system.h"
-#include "ws_html.h"
+#include "ws_http.h"
 #include "ringbuf.h"
 #include "wifi_impl.h"
 #include "miniutils.h"
@@ -56,14 +56,21 @@ static void server_get_content(char *req) {
       "</html>");
 }
 
+
 static void server_handle(u8_t io, ringbuf* rb) {
   s32_t rx;
   while ((rx = ringbuf_available(rb)) > 0) {
     u8_t buf[256];
-    int got = ringbuf_get(rb, buf, MIN(sizeof(buf), rx));
-    if (got >= 0) {
-      buf[got] = 0;
+    s32_t got = ringbuf_get(rb, buf, MIN(sizeof(buf), rx));
+    if (got <= 0) return;
+    u32_t ix;
+    for (ix = 0; ix < got; ix++) {
+      if (buf[ix] == '\r') continue;
+      if (buf[ix] == '\n') {
+      }
     }
+
+#if 0
     if (strncmp("GET ", (char*)buf, 4) == 0) {
       char *delim;
       if ((delim = (char *)strchr((char*)&buf[4], ' '))) {
@@ -105,6 +112,7 @@ static void server_handle(u8_t io, ringbuf* rb) {
     } else {
       print("WIFI_RX: NOT PROCESSED %s", buf);
     }
+#endif
   } // while rx avail
 }
 
