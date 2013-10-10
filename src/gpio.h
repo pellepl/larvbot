@@ -107,6 +107,9 @@ typedef void (*gpio_interrupt_fn)(gpio_pin pin);
 
 void gpio_init(void);
 
+void *gpio_get_hw_port(gpio_port port);
+int gpio_get_hw_pin(gpio_pin pin);
+
 void gpio_config(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mode, gpio_af af, gpio_outtype outtype, gpio_pull pull);
 void gpio_config_out(gpio_port port, gpio_pin pin, io_speed speed, gpio_outtype outtype, gpio_pull pull);
 void gpio_config_in(gpio_port port, gpio_pin pin, io_speed speed);
@@ -118,7 +121,10 @@ void gpio_disable(gpio_port port, gpio_pin pin);
 void gpio_set(gpio_port port, gpio_pin enable_pin, gpio_pin disable_pin);
 u32_t gpio_get(gpio_port port, gpio_pin pin);
 
-s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank);
-void gpio_disable_interrupt(gpio_port port, gpio_pin pin);
+s32_t gpio_interrupt_config(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank);
+void gpio_interrupt_deconfig(gpio_port port, gpio_pin pin);
+void gpio_interrupt_mask_enable(gpio_port port, gpio_pin pin, bool clear_pending);
+void gpio_interrupt_mask_disable(gpio_port port, gpio_pin pin);
+
 
 #endif /* GPIO_H_ */

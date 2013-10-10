@@ -20,6 +20,7 @@
 #define CONFIG_LSM303
 #define CONFIG_WIFI232
 #define CONFIG_SPI
+#define CONFIG_SPI_DEVICE
 #define CONFIG_BOOTLOADER
 #define CONFIG_OS
 #define CONFIG_HEAP

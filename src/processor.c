@@ -26,7 +26,8 @@ static void rcc_config(void)
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART4, ENABLE);
 #endif
 #endif
-#ifdef CONFIG_I2C
+
+  #ifdef CONFIG_I2C
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
 #endif
 
@@ -34,6 +35,12 @@ static void rcc_config(void)
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
 #endif
+
+#ifdef CONFIG_SPI
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA1, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+#endif
+
 }
 
 static void nvic_config(void)
@@ -77,6 +84,13 @@ static void nvic_config(void)
 #ifdef CONFIG_ADC
   NVIC_SetPriority(ADC_IRQn, NVIC_EncodePriority(prioGrp, 1, 0));
   NVIC_EnableIRQ(ADC_IRQn);
+#endif
+
+#ifdef CONFIG_SPI
+  NVIC_SetPriority(DMA1_Stream3_IRQn, NVIC_EncodePriority(prioGrp, 1, 2)); // rx
+  NVIC_SetPriority(DMA1_Stream4_IRQn, NVIC_EncodePriority(prioGrp, 1, 2)); // tx
+  NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+  NVIC_EnableIRQ(DMA1_Stream4_IRQn);
 #endif
 
   NVIC_SetPriority(EXTI0_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
@@ -307,22 +321,72 @@ static void adc_config(void) {
 #endif
 }
 
+static void spi_config(void) {
+#ifdef CONFIG_SPI
+  DMA_InitTypeDef  DMA_InitStructure;
+
+  // AF5 = GPIO_AF_SPI2
+  // spi2.clk   B13
+  gpio_config(PORTB, PIN13, CLK_100MHZ, AF, AF5, PUSHPULL, NOPULL);
+  // spi2.miso  B14
+  gpio_config(PORTB, PIN14, CLK_100MHZ, AF, AF5, PUSHPULL, NOPULL);
+  // spi2.mosi  B15
+  gpio_config(PORTB, PIN15, CLK_100MHZ, AF, AF5, PUSHPULL, NOPULL);
+
+  // Configure SPIA DMA common
+  DMA_Cmd(DMA1_Stream3, DISABLE);
+  DMA_Cmd(DMA1_Stream4, DISABLE);
+  DMA_InitStructure.DMA_Channel = DMA_Channel_0;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&(SPI2->DR);
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
+  DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
+  DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
+  // Configure SPIA DMA rx
+  DMA_DeInit(DMA1_Stream3);
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
+  DMA_InitStructure.DMA_BufferSize = 0;
+  DMA_Init(DMA1_Stream3, &DMA_InitStructure);
+  // Configure SPIA DMA tx
+  DMA_DeInit(DMA1_Stream4);
+  DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  DMA_InitStructure.DMA_BufferSize = 0;
+  DMA_Init(DMA1_Stream4, &DMA_InitStructure);
+
+  // Enable DMA SPI RX channel transfer complete and errors interrupt
+  DMA_ITConfig(DMA1_Stream3, DMA_IT_TC | DMA_IT_TE | DMA_IT_DME, ENABLE);
+  // Disable DMA SPI TX channel transfer complete interrupt
+  // Always use tx/rx transfers and only await DMA RX finished irq
+  // When only txing, we receive into a dummy byte , no autoinc
+  DMA_ITConfig(DMA1_Stream4, DMA_IT_TC, DISABLE);
+  // Enable DMA SPI TX channel errors interrupt
+  DMA_ITConfig(DMA1_Stream4, DMA_IT_TE | DMA_IT_DME, ENABLE);
+
+  // Enable SPI_MASTER DMA Rx/Tx request
+  SPI_I2S_DMACmd(SPI2, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , ENABLE);
+
+#endif
+}
+
 // bootloader settings
 
 static void SPI_config_bootloader() {
 #ifdef CONFIG_SPI
-  // Abort all DMA transfers
-  /* Disable DMA SPI1 RX channel transfer complete interrupt */
-  DMA_ITConfig(_SPI_BUS(0)->dma_rx_stream, DMA_IT_TC, DISABLE);
+  int i;
+  for (i = 0; i < SPI_MAX_ID; i++) {
+    // Abort all DMA transfers
+    /* Disable DMA SPI RX channel transfer complete interrupt */
+    DMA_ITConfig(_SPI_BUS(i)->dma_rx_stream, DMA_IT_TC | DMA_IT_TE | DMA_IT_DME, DISABLE);
 
-  /* Disable SPI1_MASTER DMA Rx/Tx request */
-  SPI_I2S_DMACmd(_SPI_BUS(0)->hw, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
-
-  /* Disable DMA SPI2 RX channel transfer complete interrupt */
-  DMA_ITConfig(_SPI_BUS(1)->dma_rx_stream, DMA_IT_TC, DISABLE);
-
-  /* Disable SPI1_MASTER DMA Rx/Tx request */
-  SPI_I2S_DMACmd(_SPI_BUS(0)->hw, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
+    /* Disable SPI_MASTER DMA Rx/Tx request */
+    SPI_I2S_DMACmd(_SPI_BUS(i)->hw, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx , DISABLE);
+  }
 #endif // CONFIG_SPI
 }
 
@@ -339,6 +403,7 @@ void PROC_init() {
   tim_config();
   wifi_config();
   adc_config();
+  spi_config();
 
   // this would be the led, yes?
   gpio_config(PORTF, PIN6, CLK_50MHZ, OUT, AF0, PUSHPULL, NOPULL);

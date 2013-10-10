@@ -13,6 +13,9 @@
 #ifdef CONFIG_ADC
 #include "adc_driver.h"
 #endif
+#ifdef CONFIG_SPI
+#include "spi_driver.h"
+#endif
 
 // Cortex-M4 exceptions
 // Weak aliases
@@ -205,4 +208,24 @@ void ADC_IRQHandler(void) {
   ADC_irq();
 #endif
   TRACE_IRQ_EXIT(ADC_IRQn);
+}
+
+void DMA1_Stream3_IRQHandler(void) {
+  TRACE_IRQ_ENTER(DMA1_Stream3_IRQn);
+#ifdef CONFIG_SPI
+#if CONFIG_SPI_CNT > 0
+  SPI_irq(_SPI_BUS(0));
+#endif
+#endif
+  TRACE_IRQ_EXIT(DMA1_Stream3_IRQn);
+}
+
+void DMA1_Stream4_IRQHandler(void) {
+  TRACE_IRQ_ENTER(DMA1_Stream4_IRQn);
+#ifdef CONFIG_SPI
+#if CONFIG_SPI_CNT > 0
+  SPI_irq(_SPI_BUS(0));
+#endif
+#endif
+  TRACE_IRQ_EXIT(DMA1_Stream4_IRQn);
 }

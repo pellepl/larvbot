@@ -68,7 +68,7 @@ RM = rm -f
 INCLUDE_DIRECTIVES = 
 COMPILEROPTIONS = $(INCLUDE_DIRECTIVES) $(FLAGS) -mcpu=cortex-m4 -mno-thumb-interwork -mthumb -Wall -gdwarf-2
 #-ffunction-sections -fdata-sections
-COMPILEROPTIONS += -O2
+COMPILEROPTIONS += -Os
 # -nostartfiles -nostdlib 
 ASSEMBLEROPTION = $(COMPILEROPTIONS)
 LINKERSCRIPT = arm.ld
@@ -99,6 +99,8 @@ CFILES		+= timer.c
 CFILES		+= cli.c
 CFILES		+= wifi_impl.c
 CFILES		+= adc_driver.c
+CFILES		+= ov7670_test.c
+CFILES		+= ws_server.c
 
 # tinyheap files
 include ../generic/tinyheap/files.mk

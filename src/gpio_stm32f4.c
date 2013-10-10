@@ -222,6 +222,14 @@ static void io_setup(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mod
   GPIO_Init((GPIO_TypeDef *)io_ports[port], &hw);
 }
 
+void *gpio_get_hw_port(gpio_port port) {
+  return io_ports[port];
+}
+
+int gpio_get_hw_pin(gpio_pin pin) {
+  return io_pins[pin];
+}
+
 void gpio_config(gpio_port port, gpio_pin pin, io_speed speed, gpio_mode mode, gpio_af af, gpio_outtype outtype, gpio_pull pull) {
   io_enable_pin(port, pin);
   io_setup(port, pin, speed, mode, af, outtype, pull);
@@ -253,7 +261,7 @@ void gpio_set(gpio_port port, gpio_pin enable_pin, gpio_pin disable_pin) {
 u32_t gpio_get(gpio_port port, gpio_pin pin) {
   return GPIO_read(io_ports[port], io_pins[pin]);
 }
-s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank) {
+s32_t gpio_interrupt_config(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, gpio_flank flank) {
   EXTI_InitTypeDef EXTI_InitStructure;
 
   if (_gpio.ifns[pin]) {
@@ -271,11 +279,10 @@ s32_t gpio_enable_interrupt(gpio_port port, gpio_pin pin, gpio_interrupt_fn fn, 
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
   EXTI_Init(&EXTI_InitStructure);
 
-  NVIC_EnableIRQ(io_ext_irq[pin]);
-
   return 0;
 }
-void gpio_disable_interrupt(gpio_port port, gpio_pin pin) {
+
+void gpio_interrupt_deconfig(gpio_port port, gpio_pin pin) {
   EXTI_InitTypeDef EXTI_InitStructure;
   _gpio.ifns[pin] = NULL;
 
@@ -286,6 +293,17 @@ void gpio_disable_interrupt(gpio_port port, gpio_pin pin) {
   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
   EXTI_InitStructure.EXTI_LineCmd = DISABLE;
   EXTI_Init(&EXTI_InitStructure);
+}
+
+void gpio_interrupt_mask_disable(gpio_port port, gpio_pin pin) {
+  NVIC_DisableIRQ(io_ext_irq[pin]);
+}
+
+void gpio_interrupt_mask_enable(gpio_port port, gpio_pin pin, bool clear_pending) {
+  if (clear_pending) {
+    EXTI_ClearITPendingBit(io_exti_lines[pin]);
+  }
+  NVIC_EnableIRQ(io_ext_irq[pin]);
 }
 
 void gpio_init(void) {

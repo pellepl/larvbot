@@ -51,7 +51,7 @@ int ADC_sample_mono_single(adc_channel ch) {
   adc_common.ADC_TwoSamplingDelay = ADC_TwoSamplingDelay_5Cycles;
   ADC_CommonInit(&adc_common);
   adc.channel0  = ch;
-  ADC_RegularChannelConfig(ADC1, adc_channels[ch], 1, ADC_SampleTime_3Cycles);
+  ADC_RegularChannelConfig(ADC1, adc_channels[ch], 1, ADC_SampleTime_28Cycles);
 
   ADC_SoftwareStartConv(ADC1);
 
@@ -73,8 +73,8 @@ int ADC_sample_stereo_single(adc_channel ch1, adc_channel ch2) {
   ADC_CommonInit(&adc_common);
   adc.channel0  = ch1;
   adc.channel1  = ch2;
-  ADC_RegularChannelConfig(ADC1, adc_channels[ch1], 1, ADC_SampleTime_3Cycles);
-  ADC_RegularChannelConfig(ADC2, adc_channels[ch2], 1, ADC_SampleTime_3Cycles);
+  ADC_RegularChannelConfig(ADC1, adc_channels[ch1], 1, ADC_SampleTime_28Cycles);
+  ADC_RegularChannelConfig(ADC2, adc_channels[ch2], 1, ADC_SampleTime_28Cycles);
 
   ADC_SoftwareStartConv(ADC1);
 

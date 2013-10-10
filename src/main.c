@@ -28,9 +28,13 @@
 #endif
 #ifdef CONFIG_WIFI232
 #include "wifi_impl.h"
+#include "ws_server.h"
 #endif
 #ifdef CONFIG_ADC
 #include "adc_driver.h"
+#endif
+#ifdef CONFIG_SPI
+#include "spi_driver.h"
 #endif
 
 int main(void) {
@@ -43,6 +47,9 @@ int main(void) {
 #endif
 #ifdef CONFIG_I2C
   I2C_init();
+#endif
+#ifdef CONFIG_SPI
+  SPI_init();
 #endif
 #ifdef CONFIG_UART
   UART_init();
@@ -59,11 +66,13 @@ int main(void) {
   __enable_irq();
 
   IO_define(IOSTD, io_usb, 0);
+  //IO_define(IOSTD, io_uart, 1);
   IO_define(IOWIFI, io_uart, 0);
   IO_define(IODBG, io_uart, 1);
 
 #ifdef CONFIG_WIFI232
   WIFI_IMPL_init();
+  SERVER_init();
 #endif
 #ifdef CONFIG_ADC
   ADC_init();
@@ -72,6 +81,9 @@ int main(void) {
   CLI_init();
 
   ioprint(IODBG, "\n"APP_NAME" debug channel open\n");
+  ioprint(IODBG, "RAM:   0x%08x -- 0x%08x, %i kB\n", RAM_BEGIN, RAM_END, ((u32_t)RAM_END-(u32_t)RAM_BEGIN)>>10);
+  ioprint(IODBG, "XRAM:  0x%08x -- 0x%08x, %i kB\n", XRAM_BEGIN, XRAM_END, ((u32_t)XRAM_END-(u32_t)XRAM_BEGIN)>>10);
+  ioprint(IODBG, "FLASH: 0x%08x -- 0x%08x, %i kB\n", FLASH_BEGIN, FLASH_END, ((u32_t)FLASH_END-(u32_t)FLASH_BEGIN)>>10);
 
   print("\n\n\nHardware initialization done\n");
 
@@ -236,6 +248,8 @@ void hard_fault_handler_c (unsigned int * hardfault_args)
   TASK_dump(IODBG);
 
   SYS_dump_trace(IODBG);
+
+  __asm__ volatile ("bkpt #0\n");
 
   while(1);
 }

@@ -95,30 +95,7 @@
 // unstable. Do nod sent multitudes of data using this config
 //#define CONFIG_SPI_POLL
 
-#define SPI1_MASTER_GPIO              GPIOA
-#define SPI1_MASTER_GPIO_CLK          RCC_APB2Periph_GPIOA
-#define SPI1_MASTER_PIN_SCK           GPIO_Pin_5
-#define SPI1_MASTER_PIN_MISO          GPIO_Pin_6
-#define SPI1_MASTER_PIN_MOSI          GPIO_Pin_7
-
-#define SPI1_MASTER                   SPI1
-#define SPI1_MASTER_BASE              SPI1_BASE
-#define SPI1_MASTER_CLK               RCC_APB2Periph_SPI1
-#define SPI1_MASTER_DMA               DMA1
-#define SPI1_MASTER_DMA_CLK           RCC_AHBPeriph_DMA1
-
-#define SPI2_MASTER_GPIO              GPIOB
-#define SPI2_MASTER_GPIO_CLK          RCC_APB2Periph_GPIOB
-#define SPI2_MASTER_PIN_SCK           GPIO_Pin_13
-#define SPI2_MASTER_PIN_MISO          GPIO_Pin_14
-#define SPI2_MASTER_PIN_MOSI          GPIO_Pin_15
-
-#define SPI2_MASTER                   SPI2
-#define SPI2_MASTER_BASE              SPI2_BASE
-#define SPI2_MASTER_CLK               RCC_APB1Periph_SPI2
-#define SPI2_MASTER_DMA               DMA1
-#define SPI2_MASTER_DMA_CLK           RCC_AHBPeriph_DMA1
-
+#define CONFIG_SPI_CNT             1
 /** SPI FLASH **/
 
 // spi flash chip select port and pin
@@ -194,7 +171,7 @@
 #define UART1_SPEED 115200
 #define UART2_SPEED WIFI_UART_BAUD
 #define UART3_SPEED 115200
-#define UART4_SPEED 115200
+#define UART4_SPEED 912600
 
 /** OS **/
 
@@ -207,13 +184,26 @@
 #define XRAM_SIZE               (128*1024)
 #define XRAM_END                ((void*)(XRAM_BEGIN + XRAM_SIZE))
 
+#define VALID_RAM(x) \
+  (((void*)(x) >= RAM_BEGIN && (void*)(x) < RAM_END) || ((void*)(x) >= XRAM_BEGIN && (void*)(x) < XRAM_END))
+
+#define VALID_FLASH(x) \
+  ((void*)(x) >= (void*)FLASH_BEGIN && (void*)(x) < (void*)(FLASH_END))
+
+#define VALID_DATA(x) \
+  (VALID_RAM(x) || VALID_FLASH(x))
+
 #define OS_DBG_BADR(x) \
-    (((x) < RAM_BEGIN || (x) > RAM_END) && ((x) < XRAM_BEGIN || (x) > XRAM_END))
+    (!VALID_RAM(x))
 
 
 /** WIFI **/
 
 #define CONFIG_WIFI
+
+#define CONFIG_WIFI_RX_MAX_LEN  2048
+#define CONFIG_WIFI_TX_MAX_LEN  2048
+
 
 /** DEBUG **/
 
