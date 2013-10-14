@@ -31,6 +31,10 @@ void ADC_init(void);
 int ADC_sample_mono_single(adc_channel ch);
 int ADC_sample_stereo_single(adc_channel ch1, adc_channel ch2);
 
+int ADC_sample_mono_continuous(adc_channel ch);
+int ADC_sample_stereo_continuous(adc_channel ch1, adc_channel ch2, u32_t freq);
+int ADC_sample_continuous_stop(void);
+
 int ADC_set_callback(adc_cb cb);
 
 void ADC_irq();

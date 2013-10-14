@@ -43,9 +43,13 @@ static void wifi_impl_data_cb(u8_t io, u16_t len) {
     if (c == -1) return;
     _wi.rec++;
     s32_t res = ringbuf_putc(&_wi.rx_rb, c);
-    if (res == RB_OK || res == RB_ERR_FULL) {
+    bool buffer_capacity_alert =
+        (res == RB_ERR_FULL) ||
+        (ringbuf_free(&_wi.rx_rb) <=  3*CONFIG_WIFI_RX_MAX_LEN/4);
+
+    if (res == RB_OK || buffer_capacity_alert) {
       bool handle = !_wi.handling_input && (
-          res == RB_ERR_FULL ||
+          buffer_capacity_alert ||
           (c == _wi.delim_char) ||
           ((_wi.delim_mask & WIFI_IMPL_DELIM_LENGTH) && _wi.rec >= _wi.delim_length));
       if (handle) {
@@ -54,11 +58,12 @@ static void wifi_impl_data_cb(u8_t io, u16_t len) {
         ASSERT(t);
         TASK_run(t, IOWIFI, &_wi.rx_rb);
       }
+      if (res != RB_OK) return;
     }
   }
 }
 
-static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *data) {
+static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *argp) {
   // TODO: copy and report data struct back via task message
   if (res < WIFI_OK) {
     print("wifi err:%i\n", res);
@@ -70,7 +75,7 @@ static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *data) {
     if (res == WIFI_END_OF_SCAN) {
       print("  end of scan\n");
     } else {
-      wifi_ap *ap = (wifi_ap *)data;
+      wifi_ap *ap = (wifi_ap *)argp;
       print(
           "  ch%i\t%s\t[%s]\t%i%%\t%s\n",
           ap->channel,
@@ -82,7 +87,7 @@ static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *data) {
     break;
   }
   case WIFI_GET_WAN: {
-    wifi_wan_setting *wan = (wifi_wan_setting *)data;
+    wifi_wan_setting *wan = (wifi_wan_setting *)argp;
     print(
         "  %s  ip:%i.%i.%i.%i  netmask %i.%i.%i.%i  gateway %i.%i.%i.%i\n",
         wan->method == WIFI_WAN_STATIC ? "STATIC":"DHCP",
@@ -92,7 +97,7 @@ static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *data) {
     break;
   }
   case WIFI_GET_SSID: {
-    char *ssid= (char *)data;
+    char *ssid= (char *)argp;
     print("  %s\n", ssid);
     break;
   }
@@ -113,12 +118,12 @@ void WIFI_IMPL_set_delim(u8_t delim_mask,
     u8_t delim_char, u32_t delim_len, u32_t delim_ms) {
   _wi.delim_mask = delim_mask;
 
-  if (delim_mask && WIFI_IMPL_DELIM_CHAR) {
+  if (delim_mask & WIFI_IMPL_DELIM_CHAR) {
     _wi.delim_char = delim_char;
   } else {
     _wi.delim_char = 0xff00;
   }
-  if (delim_mask && WIFI_IMPL_DELIM_LENGTH) {
+  if (delim_mask & WIFI_IMPL_DELIM_LENGTH) {
     _wi.delim_length = delim_len;
     _wi.rec = ringbuf_available(&_wi.rx_rb);
 

@@ -77,6 +77,9 @@ static int f_wifi_open(void);
 #ifdef CONFIG_ADC
 static int f_adc_one(int channel);
 static int f_adc_two(int ch1, int ch2);
+static int f_adc_two_cont(int ch1, int ch2, int freq);
+static int f_adc_cont_stop(void);
+static int f_adc_get_timer(void);
 #endif
 
 #ifdef CONFIG_SPI
@@ -110,6 +113,10 @@ static int f_ov7670_send(void);
 static int f_ov7670_read(int);
 static int f_ov7670_write(int,int);
 static int f_ov7670_init(void);
+
+static int f_ear_gain_init(void);
+static int f_ear_gain_max(void);
+static int f_ear_gain_min(void);
 
 // ----------------------------
 // COMMAND LINE INTERFACE TABLE
@@ -167,11 +174,21 @@ static cmd c_tbl[] = {
 #ifdef CONFIG_ADC
     {.name = "adc_one",     .fn = (func)f_adc_one,
         .help = "Samples one channel\n" \
-            "adc_one <channel>\n"
+            "adc_one <channel> (<num>)\n"
     },
     {.name = "adc_two",     .fn = (func)f_adc_two,
         .help = "Samples two channels simultaneously\n" \
-            "adc_two <channel1> <channel2>\n"
+            "adc_two <channel1> <channel2> (<num>)\n"
+    },
+    {.name = "adc_two_cont",     .fn = (func)f_adc_two_cont,
+        .help = "Samples two channels continuously\n" \
+            "adc_two_cont <channel1> <channel2> <freq>\n"
+    },
+    {.name = "adc_stop",     .fn = (func)f_adc_cont_stop,
+        .help = "Stops continuous sampling\n"
+    },
+    {.name = "adc_tim",     .fn = (func)f_adc_get_timer,
+        .help = "Returns adc timer value\n"
     },
 #endif
 
@@ -281,6 +298,17 @@ static cmd c_tbl[] = {
     {.name = "ov_init", .fn = (func)f_ov7670_init,
         .help = "Inits ov7670\n"
     },
+
+    {.name = "ear_init", .fn = (func)f_ear_gain_init,
+        .help = "Init ear gain\n"
+    },
+    {.name = "ear_max", .fn = (func)f_ear_gain_max,
+        .help = "Sets ear max gain\n"
+    },
+    {.name = "ear_min", .fn = (func)f_ear_gain_min,
+        .help = "Sets ear min gain\n"
+    },
+
 
     // menu end marker
     {.name = NULL,    .fn = (func)0,        .help = NULL},
@@ -517,9 +545,11 @@ static int f_wifi_open(void) {
 
 #ifdef CONFIG_ADC
 static time adc_start;
+
 static void cli_adc_cb(adc_channel ch1, u32_t val1, adc_channel ch2, u32_t val2) {
   time diff = SYS_get_tick() - adc_start;
-  print("ADC result: ch%i %08x  ch%i %08x  (dt:%i ticks)\n", ch1, val1, ch2, val2, diff);
+  //print("ADC result: ch%i %08x  ch%i %08x  (dt:%i ticks)\n", ch1, val1, ch2, val2, diff);
+  UART_tx_force_char(_UART(1), val1>>4);
 }
 
 static int f_adc_one(int channel) {
@@ -558,6 +588,37 @@ static int f_adc_two(int ch1, int ch2) {
     print("err: %i\n", res);
   }
 
+  return 0;
+}
+
+static int f_adc_two_cont(int ch1, int ch2, int freq) {
+  if (_argc != 3) return -1;
+  if (ch1 + 1 >= _ADC_CHANNELS) {
+    print("bad channel1\n");
+    return 0;
+  }
+  if (ch2 + 1 >= _ADC_CHANNELS) {
+    print("bad channel2\n");
+    return 0;
+  }
+  ADC_set_callback(cli_adc_cb);
+  int res = ADC_sample_stereo_continuous(ch1+1, ch2+1, freq);
+  if (res != ADC_OK) {
+    print("err: %i\n", res);
+  }
+  return 0;
+}
+
+static int f_adc_cont_stop(void) {
+  int res = ADC_sample_continuous_stop();
+  if (res != ADC_OK) {
+    print("err: %i\n", res);
+  }
+  return 0;
+}
+
+static int f_adc_get_timer(void) {
+  print("TIM3:%i\n", TIM_GetCounter(TIM3));
   return 0;
 }
 
@@ -1057,6 +1118,50 @@ static int f_ov7670_send(void) {
   ov7670_read_pic(NULL);
   return 0;
 }
+
+static int f_ear_gain_init(void) {
+  // CS
+  gpio_config(PORTC, PIN0, CLK_25MHZ, OUT, AF0, PUSHPULL, NOPULL);
+  // U/nD
+  gpio_config(PORTC, PIN1, CLK_25MHZ, OUT, AF0, PUSHPULL, NOPULL);
+
+  gpio_disable(PORTC, PIN0);
+  gpio_disable(PORTC, PIN1);
+
+  return 0;
+}
+
+static int f_ear_gain_max(void) {
+  gpio_enable(PORTC, PIN1);
+
+  gpio_enable(PORTC, PIN0);
+  SYS_hardsleep_ms(1);
+  int i;
+  for (i = 0; i < 32; i++) {
+    gpio_enable(PORTC, PIN1);
+    SYS_hardsleep_ms(1);
+    gpio_disable(PORTC, PIN1);
+    SYS_hardsleep_ms(1);
+  }
+  gpio_disable(PORTC, PIN0);
+  return 0;
+}
+static int f_ear_gain_min(void) {
+  gpio_disable(PORTC, PIN1);
+
+  gpio_enable(PORTC, PIN0);
+  SYS_hardsleep_ms(1);
+  int i;
+  for (i = 0; i < 32; i++) {
+    gpio_enable(PORTC, PIN1);
+    SYS_hardsleep_ms(1);
+    gpio_disable(PORTC, PIN1);
+    SYS_hardsleep_ms(1);
+  }
+  gpio_disable(PORTC, PIN0);
+  return 0;
+}
+
 
 
 // -------------------------------
