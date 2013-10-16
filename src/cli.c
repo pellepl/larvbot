@@ -525,12 +525,14 @@ static int f_wifi_config(char *ssid, char *enc, char *pass) {
   return 0;
 }
 static int f_wifi_open(void) {
+  WIFI_IMPL_set_idle(TRUE);
   IO_put_buf(IOWIFI, (u8_t*)"+++", 3);
-  SYS_hardsleep_ms(10);
+  //SYS_hardsleep_ms(10);
   u32_t spoon_guard = 0x100000;
   while ((UART_rx_available(_UART(WIFI_UART)) == 0) && --spoon_guard);
   if (spoon_guard == 0) {
     print("No answer\n");
+    WIFI_IMPL_set_idle(FALSE);
     return 0;
   }
   UART_get_char(_UART(WIFI_UART));
@@ -538,6 +540,7 @@ static int f_wifi_open(void) {
   UART_tx_flush(_UART(WIFI_UART));
   _argc = 1;
   f_pipe(IOWIFI);
+  WIFI_IMPL_set_idle(FALSE);
   return 0;
 }
 

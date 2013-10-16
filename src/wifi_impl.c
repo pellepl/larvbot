@@ -18,53 +18,16 @@ static union {
 } wifi_arg;
 
 static struct {
-  ringbuf rx_rb;
-  u8_t rx_buf[CONFIG_WIFI_RX_MAX_LEN];
-
-  volatile bool handling_input;
   void (*data_handler_f)(u8_t io, ringbuf *rx_data_rb);
+  void (*data_tmo_handler_f)(u8_t io);
 
-  u8_t delim_mask;
-  u16_t delim_char;
-  u32_t delim_length;
-  u32_t rec;
-} _wi;
+  bool idle;
+} wi;
 
 
-static void wifi_impl_task_f(u32_t io, void* vrb) {
-  _wi.handling_input = FALSE;
-  if (_wi.data_handler_f) _wi.data_handler_f(io, (ringbuf *)vrb);
-}
-
-static void wifi_impl_data_cb(u8_t io, u16_t len) {
-  int i;
-  for (i = 0; i < len; i++) {
-    s32_t c = IO_get_char(io);
-    if (c == -1) return;
-    _wi.rec++;
-    s32_t res = ringbuf_putc(&_wi.rx_rb, c);
-    bool buffer_capacity_alert =
-        (res == RB_ERR_FULL) ||
-        (ringbuf_free(&_wi.rx_rb) <=  3*CONFIG_WIFI_RX_MAX_LEN/4);
-
-    if (res == RB_OK || buffer_capacity_alert) {
-      bool handle = !_wi.handling_input && (
-          buffer_capacity_alert ||
-          (c == _wi.delim_char) ||
-          ((_wi.delim_mask & WIFI_IMPL_DELIM_LENGTH) && _wi.rec >= _wi.delim_length));
-      if (handle) {
-        _wi.handling_input = TRUE;
-        task *t = TASK_create(wifi_impl_task_f, 0);
-        ASSERT(t);
-        TASK_run(t, IOWIFI, &_wi.rx_rb);
-      }
-      if (res != RB_OK) return;
-    }
-  }
-}
-
-static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *argp) {
+static void wifi_impl_cfg_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *argp) {
   // TODO: copy and report data struct back via task message
+  if (wi.idle) return;
   if (res < WIFI_OK) {
     print("wifi err:%i\n", res);
     return;
@@ -106,42 +69,32 @@ static void wifi_impl_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *argp) {
   } // switch
 }
 
+static void wifi_impl_data_cb(u8_t io_out, ringbuf *rb_in) {
+  if (wi.data_handler_f) wi.data_handler_f(io_out, rb_in);
+}
+
+static void wifi_impl_data_silence_cb(u8_t io_out) {
+  if (wi.data_tmo_handler_f) wi.data_tmo_handler_f(io_out);
+}
+
 void WIFI_IMPL_init(void) {
-  memset(&_wi, 0, sizeof(_wi));
-  ringbuf_init(&_wi.rx_rb, _wi.rx_buf, CONFIG_WIFI_RX_MAX_LEN);
-  _wi.delim_mask = WIFI_IMPL_DELIM_LENGTH;
-  _wi.delim_length = 1;
-  WIFI_init(wifi_impl_cb, wifi_impl_data_cb);
+  memset(&wi, 0, sizeof(wi));
+  WIFI_init(wifi_impl_cfg_cb, wifi_impl_data_cb, wifi_impl_data_silence_cb);
+  WIFI_set_data_delimiter(WIFI_DELIM_CHAR | WIFI_DELIM_LENGTH | WIFI_DELIM_TIME,
+      '\n', SERVER_REQ_BUF_MAX_LEN/2, 200);
+  WIFI_set_data_silence_timeout(2000);
 }
 
-void WIFI_IMPL_set_delim(u8_t delim_mask,
-    u8_t delim_char, u32_t delim_len, u32_t delim_ms) {
-  _wi.delim_mask = delim_mask;
-
-  if (delim_mask & WIFI_IMPL_DELIM_CHAR) {
-    _wi.delim_char = delim_char;
-  } else {
-    _wi.delim_char = 0xff00;
-  }
-  if (delim_mask & WIFI_IMPL_DELIM_LENGTH) {
-    _wi.delim_length = delim_len;
-    _wi.rec = ringbuf_available(&_wi.rx_rb);
-
-    // got enough data for callback already?
-    if (_wi.rec >= delim_len) {
-      if (!_wi.handling_input) {
-        _wi.handling_input = TRUE;
-        task *t = TASK_create(wifi_impl_task_f, 0);
-        ASSERT(t);
-        TASK_run(t, IOWIFI, &_wi.rx_rb);
-      }
-    }
-  }
-  // TODO millisecond delimiter
+void WIFI_IMPL_set_data_handler(void (*data_handler_f)(u8_t io, ringbuf *rx_data_rb)) {
+  wi.data_handler_f = data_handler_f;
 }
 
-void WIFI_IMPL_set_handler(void (*data_handler_f)(u8_t io, ringbuf *rx_data_rb)) {
-  _wi.data_handler_f = data_handler_f;
+void WIFI_IMPL_set_data_tmo_handler(void (*data_tmo_handler_f)(u8_t io)) {
+  wi.data_tmo_handler_f = data_tmo_handler_f;
+}
+
+void WIFI_IMPL_set_idle(bool idle) {
+  wi.idle = idle;
 }
 
 void WIFI_IMPL_state() {

@@ -65,7 +65,7 @@ static void nvic_config(void)
 
 #ifdef CONFIG_UART
 #ifdef CONFIG_UART2
-  NVIC_SetPriority(USART2_IRQn, NVIC_EncodePriority(prioGrp, 3, 0));
+  NVIC_SetPriority(USART2_IRQn, NVIC_EncodePriority(prioGrp, 1, 3));
   NVIC_EnableIRQ(USART2_IRQn);
 #endif
 #ifdef CONFIG_UART4

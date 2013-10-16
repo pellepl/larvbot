@@ -203,7 +203,7 @@
 
 #define CONFIG_WIFI_RX_MAX_LEN  2048
 #define SERVER_TX_MAX_LEN       2048
-#define SERVER_REQ_BUF_MAX_LEN  256
+#define SERVER_REQ_BUF_MAX_LEN  512
 
 
 /** DEBUG **/
