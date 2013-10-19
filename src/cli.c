@@ -549,10 +549,16 @@ static int f_wifi_open(void) {
 #ifdef CONFIG_ADC
 static time adc_start;
 
+u8_t adc_buf[128*2];
+static u16_t adc_ix = 0;
+
 static void cli_adc_cb(adc_channel ch1, u32_t val1, adc_channel ch2, u32_t val2) {
-  time diff = SYS_get_tick() - adc_start;
+  //time diff = SYS_get_tick() - adc_start;
   //print("ADC result: ch%i %08x  ch%i %08x  (dt:%i ticks)\n", ch1, val1, ch2, val2, diff);
-  UART_tx_force_char(_UART(1), val1>>4);
+  //UART_tx_force_char(_UART(1), val1>>4);
+  adc_buf[adc_ix++] = val1>>4;
+  adc_buf[adc_ix++] = val2>>4;
+  if (adc_ix >= sizeof(adc_buf)) adc_ix = 0;
 }
 
 static int f_adc_one(int channel) {

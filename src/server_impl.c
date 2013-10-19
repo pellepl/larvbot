@@ -13,37 +13,60 @@
 #include "miniutils.h"
 #include "wifi_impl.h"
 
-userver_response server_response(userver_request_header *req, u8_t iobuf, userver_http_status *http_status,
-    char *content_type) {
+static void _pre_html(u8_t iobuf) {
   ioprint(iobuf, "<html>"
       "<head>"
-      "<title>An Example Page</title>"
+      "<title>"APP_NAME" Server</title>"
       "</head>"
       "<body>"
-      "Hello World, this is a very simple HTML document.<br/>");
+      );
+}
 
-  ioprint(iobuf, "got request: ");
-  ioprint(iobuf, req->resource);
-
-  ioprint(iobuf,
-      "<form name=\"input\" action=\"posttest\" method=\"post\">"
-      "Username: <input type=\"text\" name=\"user\">"
-      "<input type=\"submit\" value=\"Submit\">"
-      "<input type=\"reset\">"
-      "</form>"
-  );
-
-  ioprint(iobuf,
-    "<form enctype=\"multipart/form-data\" action=\"fileupload\" method=\"post\">"
-    /*"<input type=\"hidden\" name=\"MAX_FILE_SIZE\" value=\"1000000\" />"*/
-    "Choose a file to upload: <input name=\"uploadedfile\" type=\"file\" /><br />"
-    "<input type=\"submit\" value=\"Upload File\" />"
-    "</form>"
-  );
-
+static void _post_html(u8_t iobuf) {
   ioprint(iobuf, "</body>"
       "</html>");
+}
 
+extern u8_t adc_buf[256];
+
+userver_response server_response(userver_request_header *req, u8_t iobuf, userver_http_status *http_status,
+    char *content_type) {
+  if (strcmp(req->resource, "/adc") == 0) {
+    if (req->chunk_nbr == 0) {
+      _pre_html(iobuf);
+      ioprint(iobuf, "ADC measures<br/>");
+      ioprint(iobuf, "<canvas id=\"adccanvas\" width=\"512\" height=\"256\" style=\"border:1px solid #000000;\"></canvas>");
+      ioprint(iobuf, "<script>\n"
+                      "var c=document.getElementById(\"adccanvas\");\n"
+                      "var ctx=c.getContext(\"2d\");\n"
+                      "ctx.fillStyle=\"#000000\";\n"
+                      "ctx.fillRect(0,0,512,256);\n"
+                      "ctx.strokeStyle=\"#00ff00\";\n"
+                      "ctx.beginPath();\n"
+                      "ctx.moveTo(0,%i);\n", adc_buf[0]);
+      return USERVER_CHUNKED;
+    } else if ((req->chunk_nbr-1) < 256/32) {
+      int sample = (req->chunk_nbr-1) * 16;
+      int i;
+      for (i = sample; i < sample + 16; i ++) {
+        //ioprint(iobuf, "%i\t%02x\t%02x<br/>\n", i, adc_buf[i*2], adc_buf[i*2+1]);
+        ioprint(iobuf, "ctx.lineTo(%i,%i);\n",
+                       i*4, adc_buf[i*2]);
+      }
+      return USERVER_CHUNKED;
+    } if ((req->chunk_nbr-1) == 256/32) {
+      ioprint(iobuf, "ctx.stroke();\n"
+                     "</script>\n");
+      _post_html(iobuf);
+      return USERVER_CHUNKED;
+    } else {
+      return USERVER_CHUNKED;
+    }
+  } else {
+    _pre_html(iobuf);
+    ioprint(iobuf, "Unknown request: %s<br/>", req->resource);
+    _post_html(iobuf);
+  }
   return USERVER_OK;
 }
 

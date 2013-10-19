@@ -69,7 +69,7 @@ static void server_clear_req(userver_request_header *req) {
 static void server_send_data(u8_t ioout) {
   while (ringbuf_available(&userv.tx_rb) > 0) {
     u8_t *data;
-    u16_t len = ringbuf_available_linear(&userv.tx_rb, &data);
+    u16_t len = ringbuf_available_linear(&userv.tx_rb, &data); // this is IOWEB
     len = IO_put_buf(ioout, data, len);
     if (len < 0) break;
     //len = MIN(len, 64);
@@ -155,12 +155,13 @@ static void server_request(u8_t ioout, userver_request_header *req) {
     if (req->method != HEAD) {
       u32_t chunk_len;
       while ((chunk_len = IO_rx_available(IOWEB)) > 0) {
-        ioprint(ioout, "%x\n", chunk_len);
+        ioprint(ioout, "%x; chunk %i\r\n", chunk_len, req->chunk_nbr);
         server_send_data(ioout);
+        ioprint(ioout, "\r\n");
         userv.req.chunk_nbr++;
         (void)userv.server_resp_f(req, IOWEB, &http_status, content_type); // from now on, we ignore response
       }
-      ioprint(ioout, "0\n\n");
+      ioprint(ioout, "0\r\n\r\n");
     }
   }
 }
