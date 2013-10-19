@@ -28,7 +28,7 @@
 #endif
 #ifdef CONFIG_WIFI232
 #include "wifi_impl.h"
-#include "ws_server.h"
+#include "server_impl.h"
 #endif
 #ifdef CONFIG_ADC
 #include "adc_driver.h"
@@ -43,7 +43,7 @@ int main(void) {
   PROC_init();
   SYS_init();
 #ifdef CONFIG_USB_VCD
-  usb_serial_init();
+  USB_SER_init();
 #endif
 #ifdef CONFIG_I2C
   I2C_init();
@@ -72,7 +72,7 @@ int main(void) {
 
 #ifdef CONFIG_WIFI232
   WIFI_IMPL_init();
-  SERVER_init();
+  SERVER_LARV_init(NULL, NULL);
 #endif
 #ifdef CONFIG_ADC
   ADC_init();

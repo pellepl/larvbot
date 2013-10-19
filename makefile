@@ -100,7 +100,9 @@ CFILES		+= cli.c
 CFILES		+= wifi_impl.c
 CFILES		+= adc_driver.c
 CFILES		+= ov7670_test.c
-CFILES		+= ws_server.c
+CFILES		+= server_impl.c
+CFILES		+= userver.c
+CFILES		+= userver_codec.c
 
 # tinyheap files
 include ../generic/tinyheap/files.mk

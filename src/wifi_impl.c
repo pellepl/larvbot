@@ -80,9 +80,6 @@ static void wifi_impl_data_silence_cb(u8_t io_out) {
 void WIFI_IMPL_init(void) {
   memset(&wi, 0, sizeof(wi));
   WIFI_init(wifi_impl_cfg_cb, wifi_impl_data_cb, wifi_impl_data_silence_cb);
-  WIFI_set_data_delimiter(WIFI_DELIM_CHAR | WIFI_DELIM_LENGTH | WIFI_DELIM_TIME,
-      '\n', SERVER_REQ_BUF_MAX_LEN/2, 200);
-  WIFI_set_data_silence_timeout(2000);
 }
 
 void WIFI_IMPL_set_data_handler(void (*data_handler_f)(u8_t io, ringbuf *rx_data_rb)) {

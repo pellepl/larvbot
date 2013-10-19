@@ -41,11 +41,12 @@
 #define IOSTD             0 // usb serial
 #define IOWIFI            1 // uart2
 #define IODBG             2 // uart4
+#define IOWEB             3 // ringbuf
 
 #ifdef CONFIG_USB_VCD
-#define CONFIG_IO_MAX     (CONFIG_UART_CNT + 1)
+#define CONFIG_IO_MAX     (1 + CONFIG_UART_CNT + 1)
 #else
-#define CONFIG_IO_MAX     (CONFIG_UART_CNT)
+#define CONFIG_IO_MAX     (CONFIG_UART_CNT + 1)
 #endif
 
 /*********************************************/
@@ -201,9 +202,12 @@
 
 #define CONFIG_WIFI
 
-#define CONFIG_WIFI_RX_MAX_LEN  2048
-#define SERVER_TX_MAX_LEN       2048
-#define SERVER_REQ_BUF_MAX_LEN  512
+#define CONFIG_WIFI_RX_MAX_LEN   2048
+
+/** WEB SERVER **/
+
+#define USERVER_TX_MAX_LEN       2048
+#define USERVER_REQ_BUF_MAX_LEN  512
 
 
 /** DEBUG **/

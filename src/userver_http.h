@@ -1,19 +1,14 @@
 /*
- * ws_http.h
+ * userver_http.h
  *
  *  Created on: Oct 10, 2013
  *      Author: petera
  */
 
-#ifndef WS_HTTP_H_
-#define WS_HTTP_H_
+#ifndef USERVER_HTTP_H_
+#define USERVER_HTTP_H_
 
 #include "system.h"
-
-#define WS_MAX_RESOURCE_LEN         256
-#define WS_MAX_HOST_LEN             64
-#define WS_MAX_CONTENT_TYPE_LEN     128
-#define WS_MAX_CONNECTION_LEN       64
 
 typedef enum {
   _BAD_REQ = 0,
@@ -36,9 +31,9 @@ typedef enum {
   // Is used to apply partial modifications to a resource
   PATCH,
   _REQ_METHOD_COUNT
-} ws_http_req_method;
+} userver_http_req_method;
 
-static const char* const WS_HTTP_REQ_METHODS[] = {
+static const char* const USERVER_HTTP_REQ_METHODS[] = {
   "<BAD>",
   "GET",
   "HEAD",
@@ -56,14 +51,18 @@ typedef enum {
   FHOST,
   FCONTENT_LENGTH,
   FCONTENT_TYPE,
+  FTRANSFER_ENCODING,
+  FCONTENT_DISPOSITION,
   _FIELD_COUNT
-} ws_http_fields;
+} userver_http_fields;
 
-static const char* const WS_HTTP_FIELDS[] = {
+static const char* const USERVER_HTTP_FIELDS[] = {
   "Connection:",
   "Host:",
   "Content-Length:",
   "Content-Type:",
+  "Transfer-Encoding:",
+  "Content-Disposition:",
 };
 
 
@@ -108,9 +107,9 @@ typedef enum {
   S503_SERVICE_UNAVAILABLE,
   S504_GATEWAY_TIMEOUT,
   S505_HTTP_VERSION_NOT_SUPPORTED,
-} ws_http_status;
+} userver_http_status;
 
-static const u16 const WS_HTTP_STATUS_NUM[] = {
+static const u16 const USERVER_HTTP_STATUS_NUM[] = {
   100, 101,
   200, 201, 202, 203, 204, 205, 206,
   300, 301, 302, 303, 304, 305, 307,
@@ -119,7 +118,7 @@ static const u16 const WS_HTTP_STATUS_NUM[] = {
   500, 501, 502, 503, 504, 505,
 };
 
-static const char * const WS_HTTP_STATUS_STRING[] = {
+static const char * const USERVER_HTTP_STATUS_STRING[] = {
   "Continue",
   "Switching Protocols",
   "OK",
@@ -161,21 +160,6 @@ static const char * const WS_HTTP_STATUS_STRING[] = {
   "Gateway Time-out",
   "HTTP Version not supported",
 };
-typedef struct {
-  ws_http_req_method method;
-  char resource[WS_MAX_RESOURCE_LEN];
-  char host[WS_MAX_HOST_LEN];
-  u32_t content_length;
-  char content_type[WS_MAX_CONTENT_TYPE_LEN];
-  char connection[WS_MAX_CONNECTION_LEN];
-} ws_request_header;
-
-typedef struct {
-  ws_http_status status;
-  u32_t content_length;
-  char content_type[WS_MAX_CONTENT_TYPE_LEN];
-  char connection[WS_MAX_CONNECTION_LEN];
-} ws_response;
 
 
-#endif /* WS_HTTP_H_ */
+#endif /* USERVER_HTTP_H_ */

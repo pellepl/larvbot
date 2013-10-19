@@ -658,7 +658,18 @@ void cli_spi_dev_cb(spi_dev *dev, int res) {
     // output / read pixel
     bool valid_pix = (cli_spi_rx_buf[0] & 0x80) != 0;
     if (valid_pix) {
-      if (cli_spi_rx_len > 0) print("%02x", (cli_spi_rx_buf[0] & 0x7f));
+      if (cli_spi_rx_len > 0) {
+        //print("%02x", (cli_spi_rx_buf[0] & 0x7f));
+        int d = (cli_spi_rx_buf[0] & 0x7f);
+        if (d < 16)       print(".");
+        else if (d < 32)  print(":");
+        else if (d < 48)  print("!");
+        else if (d < 64) print("/");
+        else if (d < 80) print("X");
+        else if (d < 96) print("H");
+        else if (d < 112) print("M");
+        else              print("@");
+      }
       if (((cli_spi_rx_len) % 22) == 0) print("\n");
     }
 
