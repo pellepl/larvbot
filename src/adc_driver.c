@@ -32,6 +32,7 @@ static struct {
   adc_cb cb;
   adc_channel channel0;
   adc_channel channel1;
+  u32_t freq;
 } adc;
 
 void ADC_init(void) {
@@ -123,6 +124,7 @@ int ADC_sample_stereo_continuous(adc_channel ch1, adc_channel ch2, u32_t freq) {
     return ERR_ADC_BUSY;
   }
   adc.state = STEREO_CONT;
+  adc.freq = freq;
 
   adc_common.ADC_Mode = ADC_DualMode_RegSimult;
   adc_common.ADC_Prescaler = ADC_Prescaler_Div2;
@@ -145,6 +147,12 @@ int ADC_sample_stereo_continuous(adc_channel ch1, adc_channel ch2, u32_t freq) {
 
   return ADC_OK;
 }
+
+u32_t ADC_get_freq(void) {
+  return adc.state != IDLE ? adc.freq : 0;
+}
+
+
 
 int ADC_sample_continuous_stop(void) {
   if (adc.state == STEREO_CONT || adc.state == MONO_CONT) {
@@ -180,6 +188,8 @@ void ADC_irq() {
       case STEREO_SINGLE:
         adc.cb(adc.channel0, ADC_GetConversionValue(ADC1),
                adc.channel1, ADC_GetConversionValue(ADC2));
+        break;
+      case IDLE:
         break;
       default:
         ASSERT(FALSE);

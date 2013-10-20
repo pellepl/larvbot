@@ -37,6 +37,8 @@ int ADC_sample_continuous_stop(void);
 
 int ADC_set_callback(adc_cb cb);
 
+u32_t ADC_get_freq(void);
+
 void ADC_irq();
 
 #endif /* ADC_DRIVER_H_ */

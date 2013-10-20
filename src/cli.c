@@ -549,8 +549,8 @@ static int f_wifi_open(void) {
 #ifdef CONFIG_ADC
 static time adc_start;
 
-u8_t adc_buf[128*2];
-static u16_t adc_ix = 0;
+u8_t adc_buf[256*2];
+volatile u16_t adc_ix = 0;
 
 static void cli_adc_cb(adc_channel ch1, u32_t val1, adc_channel ch2, u32_t val2) {
   //time diff = SYS_get_tick() - adc_start;
@@ -1309,4 +1309,6 @@ static void cli_pipe(u8_t io, void *arg, u16_t len) {
 void CLI_init(void) {
   IO_set_callback(IOSTD, cli_io_cb, NULL);
   cli_task = TASK_create(cli_task_f, TASK_STATIC);
+  // TODO remove
+  ADC_set_callback(cli_adc_cb);
 }
