@@ -117,7 +117,7 @@ static void server_request(u8_t ioout, userver_request_header *req) {
   char content_type[USERV_MAX_CONTENT_TYPE_LEN];
   userver_http_status http_status = S200_OK;
 
-  strncpy(content_type, "text/html", USERV_MAX_CONTENT_TYPE_LEN);
+  strncpy(content_type, "text/html; charset=utf-8", USERV_MAX_CONTENT_TYPE_LEN);
 
   userver_response res = USERVER_OK;
   if (userv.server_resp_f){

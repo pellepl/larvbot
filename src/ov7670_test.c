@@ -27,6 +27,9 @@
 // enable a read from 0xnnn1fffd to 0xnnn20000 + picsize
 // where first read 1fffd - 1ffff will do RRST and the rest read data
 
+// TODO : Figure out why own i2c driver does not dance with OV7670
+//         not plain i2c, but "sscb"
+
 #define VSYNC_PORT    PORTB
 #define VSYNC_PIN     PIN9
 #define WE_PORT       PORTC

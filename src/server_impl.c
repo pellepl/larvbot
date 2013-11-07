@@ -16,10 +16,12 @@
 #include "adc_driver.h"
 
 static void _pre_html(u8_t iobuf) {
-  ioprint(iobuf, "<html>"
+  ioprint(iobuf,
+      //"<!DOCTYPE HTML>" // PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n"
+      "<html>"
       "<head>"
       "<title>"APP_NAME" server</title>"
-      "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">"
+      "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\"></link>"
       "</head>"
       "<body>"
       );
@@ -30,7 +32,7 @@ static void _post_html(u8_t iobuf) {
       "</html>");
 }
 
-extern u8_t adc_buf[512];
+extern u8_t adc_buf[256*2];
 extern volatile u16_t adc_ix;
 static u16 _adc_ix;
 #define SAMPLE_CHUNK_BUF    64
@@ -40,9 +42,9 @@ userver_response server_response(userver_request_header *req, u8_t iobuf, userve
   if (strcmp(req->resource, "/") == 0 || strcmp(req->resource, "/index.html") == 0) {
     _pre_html(iobuf);
     ioprint(iobuf, "<h1>"APP_NAME" server</h1>");
-    ioprint(iobuf, "ticks:&nbsp;%08x</br>", SYS_get_tick());
-    ioprint(iobuf, "time:&nbsp;&nbsp;%i ms</br>", SYS_get_time_ms());
-    ioprint(iobuf, "</br>");
+    ioprint(iobuf, "ticks:&nbsp;%08x<br/>", SYS_get_tick());
+    ioprint(iobuf, "time:&nbsp;&nbsp;%i ms<br/>", SYS_get_time_ms());
+    ioprint(iobuf, "<br/>");
     ioprint(iobuf, "<a href=\"/adc\">ADC</a><br/>");
     ioprint(iobuf, "<a href=\"/dump\">System dump</a><br/>");
     ioprint(iobuf, "<a href=\"/reset\" "
@@ -72,14 +74,11 @@ userver_response server_response(userver_request_header *req, u8_t iobuf, userve
         "color: #80ff80;"
         "background-color: #404040;"
         "border: 1px solid #808080;"
-//        "height: 10px;"
         "left: 10px;"
-//        "margin: 20px;"
         "right: 10px;"
         "top: 10px;"
-        "}"
-        "h1 {"
-        "font-family: Courier, sans-serif }\n");
+        "}\n"
+        "h1 {font-family: Courier, sans-serif;}\n");
   }
   else if (strcmpbegin("/adc", req->resource) == 0) {
     char *sfreq;
@@ -154,7 +153,7 @@ userver_response server_response(userver_request_header *req, u8_t iobuf, userve
           "}\n"
           "ctx.stroke();\n"
           "</script>\n");
-      ioprint(iobuf, "</br>current frequency: %i Hz</br>", ADC_get_freq()/1000);
+      ioprint(iobuf, "<br/>current frequency: %i Hz<br/>", ADC_get_freq()/1000);
       ioprint(iobuf,
           "<form name=\"adc\" method=\"GET\">"
           "<table border=0><tr>"

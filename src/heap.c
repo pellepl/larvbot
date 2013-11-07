@@ -14,7 +14,7 @@ static u32_t _sram_heap_data[TH_BLOCKSIZE * (127) / sizeof(u32_t)];
 static tinyheap _sram_heap;
 
 static u32_t *_xram_heap_data = (u32_t*)XRAM_BEGIN;
-#define XRAM_HEAP_SIZE (32*1024)
+#define XRAM_HEAP_SIZE (512*1024)
 static tinyheap _xram_heap;
 
 void *HEAP_malloc(unsigned int size) {

@@ -88,6 +88,7 @@ static int f_spi(int cmd, int rx_len);
 static int f_spi_pic(void);
 static int f_spi_odo(int);
 static int f_spi_mot(void);
+static int f_spi_squal(void);
 #endif
 
 static int f_spam(int io, char *s, int delta, int times);
@@ -216,6 +217,9 @@ static cmd c_tbl[] = {
     },
     {.name = "spi_mot",         .fn = (func)f_spi_mot,
         .help = "ADNS3000 motion\n"
+    },
+    {.name = "spi_squal",       .fn = (func)f_spi_squal,
+        .help = "ADNS3000 surface qualtiy, until keypress\n"
     },
 
 #endif
@@ -556,9 +560,9 @@ static void cli_adc_cb(adc_channel ch1, u32_t val1, adc_channel ch2, u32_t val2)
   //time diff = SYS_get_tick() - adc_start;
   //print("ADC result: ch%i %08x  ch%i %08x  (dt:%i ticks)\n", ch1, val1, ch2, val2, diff);
   //UART_tx_force_char(_UART(1), val1>>4);
-  adc_buf[adc_ix++] = val1>>4;
-  adc_buf[adc_ix++] = val2>>4;
-  if (adc_ix >= sizeof(adc_buf)) adc_ix = 0;
+  adc_buf[adc_ix++] = (u8_t)(val1>>4);
+  adc_buf[adc_ix++] = (u8_t)(val2>>4);
+  adc_ix %= sizeof(adc_buf);
 }
 
 static int f_adc_one(int channel) {
@@ -802,7 +806,7 @@ static int f_spi_setup(int port, int pin, int speed, int cpol, int cpha, int fbi
   gpio_enable(port, pin);
 
   SPI_DEV_init(&spid, speed | cpol | cpha | fbit, _SPI_BUS(0), gpio_get_hw_port(port),
-      gpio_get_hw_pin(pin), SPI_CONF_IRQ_DRIVEN /*| SPI_CONF_IRQ_CALLBACK*/);
+      gpio_get_hw_pin(pin), SPI_CONF_IRQ_DRIVEN | SPI_CONF_IRQ_CALLBACK);
   SPI_DEV_set_callback(&spid, cli_spi_dev_cb);
   SPI_DEV_open(&spid);
 
@@ -871,6 +875,33 @@ static int f_spi_odo(int enable) {
   }
   return 0;
 }
+
+static int f_spi_squal(void) {
+  if (SPI_DEV_is_busy(&spid)) return 0;
+
+  cli_spi_st = 0;
+
+  cli_spi_tx[0] = 0x05;
+  cli_spi_rx_len = 1;
+
+  print("send cli data to exit\n");
+
+  while (IO_rx_available(IOSTD) == 0) {
+    SPI_DEV_SEQ_TX(spi_seq[0], cli_spi_tx, 1);
+    SPI_DEV_SEQ_RX_STOP(spi_seq[1], cli_spi_rx_buf, 1);
+    int res = SPI_DEV_sequence(&spid, spi_seq, 2);
+    if (res != SPI_OK) {
+      print("err: %i\n", res);
+      cli_spi_st = 0;
+      break;
+    } else {
+      SYS_hardsleep_ms(300);
+    }
+  }
+  return 0;
+}
+
+
 #endif // CONFIG_SPI
 
 static int f_spam(int io, char *s, int delta, int times) {

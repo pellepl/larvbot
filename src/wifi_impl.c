@@ -20,14 +20,11 @@ static union {
 static struct {
   void (*data_handler_f)(u8_t io, ringbuf *rx_data_rb);
   void (*data_tmo_handler_f)(u8_t io);
-
-  bool idle;
 } wi;
 
 
 static void wifi_impl_cfg_cb(wifi_cfg_cmd cmd, int res, u32_t arg, void *argp) {
   // TODO: copy and report data struct back via task message
-  if (wi.idle) return;
   if (res < WIFI_OK) {
     print("wifi err:%i\n", res);
     return;
@@ -91,7 +88,7 @@ void WIFI_IMPL_set_data_tmo_handler(void (*data_tmo_handler_f)(u8_t io)) {
 }
 
 void WIFI_IMPL_set_idle(bool idle) {
-  wi.idle = idle;
+  WIFI_set_idle(idle);
 }
 
 void WIFI_IMPL_state() {
