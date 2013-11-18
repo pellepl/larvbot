@@ -43,7 +43,7 @@ void ADC_init(void) {
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
   TIM_TimeBaseStructInit(&tim_conf);
-  tim_conf.TIM_Period = ((SystemCoreClock/2) / 4000) - 1; // 4 KHz
+  tim_conf.TIM_Period = ((SYS_CPU_FREQ/2) / 4000) - 1; // 4 KHz
   tim_conf.TIM_Prescaler = 0;
   tim_conf.TIM_ClockDivision = 0;
   tim_conf.TIM_CounterMode = TIM_CounterMode_Up;
@@ -137,7 +137,7 @@ int ADC_sample_stereo_continuous(adc_channel ch1, adc_channel ch2, u32_t freq) {
   ADC_RegularChannelConfig(ADC2, adc_channels[ch2], 1, ADC_SampleTime_84Cycles);
 
   TIM_TimeBaseStructInit(&tim_conf);
-  tim_conf.TIM_Period = ((SystemCoreClock/2) / freq) - 1;
+  tim_conf.TIM_Period = ((SYS_CPU_FREQ/2) / freq) - 1;
   tim_conf.TIM_Prescaler = 1000;
   tim_conf.TIM_ClockDivision = 0;
   tim_conf.TIM_CounterMode = TIM_CounterMode_Up;

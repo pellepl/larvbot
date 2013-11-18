@@ -16,6 +16,9 @@
 #ifdef CONFIG_SPI
 #include "spi_driver.h"
 #endif
+#ifdef CONFIG_SVIDEO_TEST
+#include "svideo_test.h"
+#endif
 
 // Cortex-M4 exceptions
 // Weak aliases
@@ -165,10 +168,18 @@ void SysTick_Handler(void) {
   TRACE_IRQ_EXIT(SysTick_IRQn);
 }
 
-void TIM2_IRQHandler(void) {
-  //TRACE_IRQ_ENTER(TIM2_IRQn);
+void STM32_SYSTEM_TIMER_IRQ_FN(void) {
+  //TRACE_IRQ_ENTER(STM32_SYSTEM_TIMER_IRQn);
   TIMER_irq();
-  //TRACE_IRQ_EXIT(TIM2_IRQn);
+  //TRACE_IRQ_EXIT(STM32_SYSTEM_TIMER_IRQn);
+}
+
+void TIM5_IRQHandler(void) {
+  //TRACE_IRQ_ENTER(TIM5_IRQn);
+#ifdef CONFIG_SVIDEO_TEST
+  SVIDEO_irq();
+#endif
+  //TRACE_IRQ_EXIT(TIM5_IRQn);
 }
 
 #ifdef CONFIG_UART2

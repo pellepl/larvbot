@@ -94,7 +94,6 @@ SFILES		+= stm32f_hardfault.s
 CFILES 		+= main.c
 CFILES 		+= processor.c
 CFILES 		+= stm32f4xx_it.c
-CFILES		+= gpio_stm32f4.c
 CFILES		+= timer.c
 CFILES		+= cli.c
 CFILES		+= wifi_impl.c
@@ -103,6 +102,8 @@ CFILES		+= ov7670_test.c
 CFILES		+= server_impl.c
 CFILES		+= userver.c
 CFILES		+= userver_codec.c
+#CFILES		+= svideo_test.c
+CFILES		+= signal_yin_est.c
 
 # tinyheap files
 include ../generic/tinyheap/files.mk

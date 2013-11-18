@@ -95,8 +95,9 @@
 // warning - polling method should only be used for debugging and may be
 // unstable. Do nod sent multitudes of data using this config
 //#define CONFIG_SPI_POLL
+//#define CONFIG_SPI1
+#define CONFIG_SPI2
 
-#define CONFIG_SPI_CNT             1
 /** SPI FLASH **/
 
 // spi flash chip select port and pin
@@ -153,11 +154,16 @@
 /****************************************************/
 
 /** TICKER **/
-
+// STM32 system timer
+#define CONFIG_STM32_SYSTEM_TIMER   2
 // system timer frequency
 #define SYS_MAIN_TIMER_FREQ   10000
+// system timer counter type
+typedef u16_t system_counter_type;
 // system tick frequency
 #define SYS_TIMER_TICK_FREQ   1000
+// os ticker cpu clock div
+#define SYS_OS_TICK_DIV       8
 
 /** UART **/
 
@@ -235,6 +241,12 @@
 
 // enable os scheduler validity
 #define OS_RUNTIME_VALIDITY_CHECK     0
+
+
+
+/** TEST **/
+
+//#define CONFIG_SVIDEO_TEST
 
 
 #endif /* SYSTEM_CONFIG_H_ */

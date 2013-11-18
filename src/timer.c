@@ -15,8 +15,8 @@
 
 static u32_t q;
 void TIMER_irq() {
-  if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
-    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+  if (TIM_GetITStatus(STM32_SYSTEM_TIMER, TIM_IT_Update) != RESET) {
+    TIM_ClearITPendingBit(STM32_SYSTEM_TIMER, TIM_IT_Update);
     q++;
     if ((q & 0xffff) < 0x1ff) {
       gpio_enable(PORTF, PIN6);

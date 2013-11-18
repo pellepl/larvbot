@@ -15,8 +15,8 @@ static void rcc_config(void)
   // SRAM
   RCC_AHB3PeriphClockCmd(RCC_AHB3Periph_FSMC, ENABLE);
 
-  // TIM2
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+  // TIM
+  RCC_APB1PeriphClockCmd(STM32_SYSTEM_TIMER_RCC, ENABLE);
 
 #ifdef CONFIG_UART
 #ifdef CONFIG_UART2
@@ -27,7 +27,7 @@ static void rcc_config(void)
 #endif
 #endif
 
-  #ifdef CONFIG_I2C
+#ifdef CONFIG_I2C
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
 #endif
 
@@ -41,6 +41,11 @@ static void rcc_config(void)
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
 #endif
 
+#ifdef CONFIG_SVIDEO_TEST
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
+#endif
+
 }
 
 static void nvic_config(void)
@@ -51,11 +56,11 @@ static void nvic_config(void)
   NVIC_SetPriorityGrouping(prioGrp);
 
   // enable TIM2 interrupt, supahigh
-  NVIC_SetPriority(TIM2_IRQn, NVIC_EncodePriority(prioGrp, 0, 0));
-  NVIC_EnableIRQ(TIM2_IRQn);
+  NVIC_SetPriority(STM32_SYSTEM_TIMER_IRQn, NVIC_EncodePriority(prioGrp, 0, 1));
+  NVIC_EnableIRQ(STM32_SYSTEM_TIMER_IRQn);
 
 #ifdef CONFIG_OS
-  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(prioGrp, 0, 1));
+  NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(prioGrp, 0, 2));
   NVIC_SetPriority(PendSV_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
 #endif
 
@@ -92,6 +97,13 @@ static void nvic_config(void)
   NVIC_EnableIRQ(DMA1_Stream3_IRQn);
   NVIC_EnableIRQ(DMA1_Stream4_IRQn);
 #endif
+
+#ifdef CONFIG_SVIDEO_TEST
+  // enable TIM5 interrupt, supadupahigh
+  NVIC_SetPriority(TIM5_IRQn, NVIC_EncodePriority(prioGrp, 0, 0)); // make sure this is the only preemptprio 0
+  NVIC_EnableIRQ(TIM5_IRQn);
+#endif
+
 
   NVIC_SetPriority(EXTI0_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
   NVIC_SetPriority(EXTI1_IRQn, NVIC_EncodePriority(prioGrp, 3, 3));
@@ -278,21 +290,21 @@ static void tim_config(void) {
   u16_t prescaler = 0;
 
   // Time base configuration
-  TIM_TimeBaseStructure.TIM_Period = SystemCoreClock/SYS_MAIN_TIMER_FREQ;
+  TIM_TimeBaseStructure.TIM_Period = SYS_CPU_FREQ/SYS_MAIN_TIMER_FREQ;
   TIM_TimeBaseStructure.TIM_Prescaler = 0;
   TIM_TimeBaseStructure.TIM_ClockDivision = 0;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
 
-  TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(STM32_SYSTEM_TIMER, &TIM_TimeBaseStructure);
 
   // Prescaler configuration
-  TIM_PrescalerConfig(TIM2, prescaler, TIM_PSCReloadMode_Immediate);
+  TIM_PrescalerConfig(STM32_SYSTEM_TIMER, prescaler, TIM_PSCReloadMode_Immediate);
 
   // TIM IT enable
-  TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+  TIM_ITConfig(STM32_SYSTEM_TIMER, TIM_IT_Update, ENABLE);
 
-  // TIM2 enable counter
-  TIM_Cmd(TIM2, ENABLE);
+  // TIM enable counter
+  TIM_Cmd(STM32_SYSTEM_TIMER, ENABLE);
 }
 
 static void adc_config(void) {
@@ -390,6 +402,39 @@ static void SPI_config_bootloader() {
 #endif // CONFIG_SPI
 }
 
+#ifdef CONFIG_SVIDEO_TEST
+static void svideo_test_config(void) {
+  gpio_config(PORTA, PIN4, CLK_100MHZ, ANALOG, AF0, PUSHPULL, NOPULL);
+
+  DAC_InitTypeDef DAC_InitStructure;
+  DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
+  DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
+  DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
+  DAC_Init(DAC_Channel_1, &DAC_InitStructure);
+  DAC_Cmd(DAC_Channel_1, ENABLE);
+
+  // Time base configuration
+  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+  TIM_TimeBaseStructure.TIM_Period = SYS_CPU_FREQ/2000000-1;
+  TIM_TimeBaseStructure.TIM_Prescaler = 0;
+  TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+
+  TIM_TimeBaseInit(TIM5, &TIM_TimeBaseStructure);
+  // Prescaler configuration
+  TIM_PrescalerConfig(TIM5, 0, TIM_PSCReloadMode_Immediate);
+
+  // Instant update of period please
+  TIM_ARRPreloadConfig(TIM5, DISABLE);
+
+  // TIM IT enable
+  TIM_ITConfig(TIM5, TIM_IT_Update, ENABLE);
+
+  // TIM5 enable counter
+  TIM_Cmd(TIM5, ENABLE);
+}
+#endif
+
 
 void PROC_init() {
   rcc_config();
@@ -404,6 +449,9 @@ void PROC_init() {
   wifi_config();
   adc_config();
   spi_config();
+#ifdef CONFIG_SVIDEO_TEST
+  svideo_test_config();
+#endif
 
   // this would be the led, yes?
   gpio_config(PORTF, PIN6, CLK_50MHZ, OUT, AF0, PUSHPULL, NOPULL);
